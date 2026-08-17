@@ -1,0 +1,7 @@
+interface:
+  display_name: "进入团队模式"
+  short_description: "打开、检查或退出 Codex 团队模式"
+  default_prompt: "使用 $codex-agent-team:setup 进入团队模式。"
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,9 @@
+{
+  "name": "codex-agent-team-skill",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check scripts/team.mjs"
+  }
+}

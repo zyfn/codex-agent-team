@@ -1,0 +1,7 @@
+interface:
+  display_name: "团队协作"
+  short_description: "联系同一团队中的指定成员"
+  default_prompt: "使用 $codex-agent-team:communicate 联系一名团队成员。"
+
+policy:
+  allow_implicit_invocation: false

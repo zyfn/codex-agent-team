@@ -1,0 +1,18 @@
+{
+  "name": "codex-agent-team",
+  "version": "0.1.0+codex.20260817044738",
+  "description": "Group native Codex projects and conversations into persistent teams (macOS preview).",
+  "author": {
+    "name": "AgentTeam contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AgentTeam",
+    "shortDescription": "Persistent teams built from native Codex projects and conversations.",
+    "longDescription": "Adds a top-level Team section to Codex Desktop. Each Team is a native Codex project and each member is a native persistent conversation with an independent workspace.",
+    "developerName": "AgentTeam contributors",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use $codex-agent-team:setup to enter Team mode."
+  }
+}
