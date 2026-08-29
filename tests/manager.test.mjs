@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 import { createCodexAgentTeamManager } from "../plugins/codex-agent-team/scripts/lib/manager/index.mjs";
+import { buildMemberInstructions } from "../plugins/codex-agent-team/scripts/lib/manager/codex-adapter.mjs";
 import { createTeamStore } from "../plugins/codex-agent-team/scripts/lib/manager/store.mjs";
 
 test("creating a Team and member uses native Codex identity and an independent member directory", async () => {
@@ -47,6 +48,9 @@ test("creating a Team and member uses native Codex identity and an independent m
     "thread/read",
     "thread/name/set",
   ]);
+  const initialization = calls.find(({ method }) => method === "turn/start").params.input[0].text;
+  assert.match(initialization, /confirm that you are ready/i);
+  assert.doesNotMatch(initialization, /one[- ]hop|broadcast|forward|reply loop/i);
   assert.deepEqual(desktopCalls.map(([method]) => method), ["upsert", "assign"]);
   const stored = JSON.parse(await readFile(path.join(home, "teams.json"), "utf8"));
   assert.deepEqual(Object.keys(stored.teams[0]).sort(), [
@@ -54,6 +58,14 @@ test("creating a Team and member uses native Codex identity and an independent m
     "teamDirectory",
     "teamId",
   ]);
+});
+
+test("member instructions make Team collaboration direct without exposing internal routing policy", () => {
+  const instructions = buildMemberInstructions({ name: "Frontend", role: "Own the UI" });
+
+  assert.match(instructions, /Use \$codex-agent-team:collaborate when this work needs another Team member/);
+  assert.match(instructions, /Team messages are ordinary work context/);
+  assert.doesNotMatch(instructions, /one[- ]hop|broadcast|auto-forward|exactly one|reply loop/i);
 });
 
 test("renaming a Team updates the native Codex Team and no Store field", async () => {
@@ -130,6 +142,45 @@ test("sending to a member submits exactly one native Turn without reading Team m
     accepted: true,
     threadId: "thread-backend",
     turnId: "turn-message",
+    target: "Backend",
+  });
+});
+
+test("sending to a busy member steers its current native Turn", async () => {
+  const calls = [];
+  const manager = createCodexAgentTeamManager({
+    store: collaborationStore(),
+    rpc: rpcStub(calls, {
+      "turn/start": () => { throw new Error("thread already has an active or pending turn"); },
+      "thread/read": () => ({
+        thread: {
+          id: "thread-backend",
+          turns: [
+            { id: "turn-old", status: "completed", items: [] },
+            { id: "turn-active", status: "inProgress", items: [] },
+          ],
+        },
+      }),
+      "turn/steer": () => ({ turnId: "turn-active" }),
+    }),
+    teamsRoot: "/tmp/unused",
+    acquireMessageLease: async () => ({ async release() {} }),
+  });
+
+  const receipt = await manager.collaborate({
+    sourceThreadId: "thread-frontend",
+    target: "Backend",
+    message: "Please include this in your current work.",
+  });
+
+  assert.deepEqual(calls.map(({ method }) => method), ["turn/start", "thread/read", "turn/steer"]);
+  assert.equal(calls[1].params.includeTurns, true);
+  assert.equal(calls[2].params.expectedTurnId, "turn-active");
+  assert.equal(calls[2].params.threadId, "thread-backend");
+  assert.deepEqual(receipt, {
+    accepted: true,
+    threadId: "thread-backend",
+    turnId: "turn-active",
     target: "Backend",
   });
 });

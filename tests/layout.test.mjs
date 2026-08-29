@@ -68,7 +68,12 @@ test("the installable plugin is the only runtime source tree", async () => {
     const displayName = command === "launch" ? "Launch CodexAgentTeam" : "Collaborate in CodexAgentTeam";
     assert.match(interfaceSource, new RegExp(`display_name: "${displayName}"`));
     assert.match(interfaceSource, new RegExp(`\\$codex-agent-team:${command}`));
-    assert.match(interfaceSource, new RegExp(`allow_implicit_invocation: ${command === "launch" ? "true" : "false"}`));
+    assert.match(interfaceSource, /allow_implicit_invocation: true/);
+    if (command === "collaborate") {
+      assert.doesNotMatch(skillSource, /one[- ]hop|broadcast|auto-forward|reply chain|acceptance is not completion/i);
+      assert.match(skillSource, /Do not use ordinary Codex task or thread messaging tools/);
+      assert.match(skillSource, /Do not expose the command, JSON receipt, Turn ID, or transport semantics/);
+    }
   }
   for (const retired of ["open", "setup", "message", "status", "diagnose", "close", "resume"]) {
     await assert.rejects(access(path.join(skills, retired)));

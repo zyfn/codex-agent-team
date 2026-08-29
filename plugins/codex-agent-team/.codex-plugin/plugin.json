@@ -1,6 +1,6 @@
 {
   "name": "codex-agent-team",
-  "version": "0.0.0+codex.20260829075141",
+  "version": "0.0.0+codex.20260829084301",
   "description": "Organize native Codex conversations into persistent teams (macOS preview).",
   "author": {
     "name": "zyfn",
@@ -26,7 +26,7 @@
       "Native Codex conversation teams",
       "Persistent member conversations",
       "Safe Team-owned member directories",
-      "Explicit one-hop collaboration",
+      "Native teammate collaboration",
       "Ghostty and cmux terminal layouts"
     ],
     "defaultPrompt": [

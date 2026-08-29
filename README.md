@@ -31,7 +31,7 @@ CodexAgentTeam organizes native Codex conversations into durable teams. Each mem
 | **01** | Persistent members | Define a specialist once and continue the same native Thread tomorrow. |
 | **02** | One team view | See every Team, member, and Codex attention state without opening each chat. |
 | **03** | Original conversations | Click a member to use Codex's own history, tools, approvals, and navigation. |
-| **04** | Explicit collaboration | Submit one bounded message to one teammate through the native Thread—no custom queue, broadcast, or agent loop. |
+| **04** | Native collaboration | Contact another member through its native Thread without leaving the Team workflow. |
 | **05** | Safe member directories | Start empty, create a local Git worktree, or clone a remote Git repository into a Team-owned directory. |
 
 ## Quick start
@@ -65,9 +65,9 @@ Once the CodexAgentTeam window is ready, use **Command-Q** to quit the current o
 3. Add members with a name, responsibility, avatar, initial model settings, and an optional Git source.
 4. Click a member to enter its original Codex conversation.
 
-Member creation primes the new Thread once with its identity and collaboration rules, so later work does not need to rediscover the Team setup.
+Member creation primes the new Thread with its identity, responsibility, and working directory, so later work does not need to rediscover the Team setup.
 
-Inside a member conversation, `$codex-agent-team:collaborate` can return the member's complete Team context in one call and send one explicit message to one teammate.
+Inside a member conversation, `$codex-agent-team:collaborate` can inspect the current Team, contact a teammate, or reply to an incoming Team message.
 
 Each Team has a user-visible `shared` directory for durable documents. Members use normal file tools there and send the absolute file path only when another teammate needs the document.
 
@@ -95,7 +95,7 @@ The roles are examples, not a built-in workflow. The same model works for resear
 
 - **One Team** is backed by one native Codex Project; `teamId` is that native identifier.
 - **One member** maps to one persistent native Thread and one Team-owned Member Directory. That directory is empty, a local Git worktree, or a remote Git clone.
-- **One collaboration** is one explicit message to one target member.
+- **Team collaboration** routes a message directly to the selected member's native Thread.
 - **One Dashboard** projects Codex state; it does not create a second source of truth.
 
 There is no Task database, Leader lifecycle, copied conversation history, custom App Server, or second chat UI.
