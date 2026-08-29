@@ -62,7 +62,7 @@ Once the CodexAgentTeam window is ready, use **Command-Q** to quit the current o
 
 1. Open **AgentTeam** from the global navigation.
 2. Create a Team.
-3. Add members with a name, responsibility, avatar, initial model settings, and an optional Git source.
+3. Add members with a name, responsibility, avatar, initial model settings, and working files from an empty folder, local Git worktree, or remote clone.
 4. Click a member to enter its original Codex conversation.
 
 Member creation primes the new Thread with its identity, responsibility, and working directory, so later work does not need to rediscover the Team setup.

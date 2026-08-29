@@ -62,7 +62,7 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 
 1. 从全局导航打开 **AgentTeam**。
 2. 创建一个 Team。
-3. 为成员设置名称、职责、头像、初始模型配置和可选 Git 来源。
+3. 为成员设置名称、职责、头像、初始模型配置，并选择空目录、本地 Git worktree 或远程 clone 作为工作文件。
 4. 点击成员，进入它的原始 Codex 会话。
 
 创建成员时，CodexAgentTeam 会向新 Thread 写入身份、职责和工作目录；后续工作不需要重新理解 Team 配置。

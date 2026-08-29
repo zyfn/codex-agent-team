@@ -62,8 +62,8 @@ export function chooseNativeDirectory(hostWindow, { timeoutMs = 120_000 } = {}) 
 
 function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, styles, chooseNativeDirectory) {
   const state = window.__codexAgentTeam ??= {};
-  if (state.uiRevision !== "top-navigation-v5") state.dispose?.();
-  state.uiRevision = "top-navigation-v5";
+  if (state.uiRevision !== "top-navigation-v6") state.dispose?.();
+  state.uiRevision = "top-navigation-v6";
   state.snapshot = snapshot;
   state.bindingName = bindingName;
   state.expandedTeamIds ??= new Set((snapshot.teams ?? []).map((team) => team.teamId));
@@ -92,15 +92,16 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       createTeamDescription: "Start with a name. Add members and working directories when you need them.",
       editMember: "Edit Member", addToTeam: "Add to {name}",
       editMemberDescription: "Updates this native conversation. Its existing Member Directory is preserved.",
-      createMemberDescription: "Creates a persistent native Codex conversation in an empty Member Directory, a local Git worktree, or a remote Git clone.",
+      createMemberDescription: "Choose how this member starts. AgentTeam creates a dedicated working directory and native Codex conversation.",
       memberName: "Member name", role: "Role", avatar: "Avatar", builtInAvatars: "Built-in", customAvatar: "Custom",
       chooseImage: "Choose Image", currentImage: "Current image", noImage: "No image selected",
-      gitSource: "Git repository (optional)", chooseLocalGit: "Choose Local Git", noGitSource: "No local repository selected",
-      noLocalGit: "Using remote repository", remoteGitUrl: "Remote Git URL", remoteGitPlaceholder: "https://github.com/org/repo.git",
+      workingFiles: "Working files", emptySource: "New empty folder", localSource: "Local Git repository", remoteSource: "Clone from Git URL",
+      chooseLocalGit: "Choose repository", noGitSource: "No repository selected", remoteGitUrl: "Git repository URL", remoteGitPlaceholder: "https://github.com/org/repo.git",
       choosingFolder: "Choosing…", checkingFolder: "Checking Git repository…", directoryReadFailed: "Could not read the selected folder",
-      gitRequired: "The selected folder is not a Git repository.", localWorktreeHint: "Creates an isolated Git worktree in the Member Directory.",
-      remoteCloneHint: "Clones the remote repository into the Member Directory.", emptyMemberDirectoryHint: "Creates an empty Member Directory.",
-      finalWorkingDirectory: "Working directory: {path}", memberDirectoryPlaceholder: "<member name>",
+      gitRequired: "The selected folder is not a Git repository.", localSourceHint: "AgentTeam creates an isolated worktree; the source repository is not modified.",
+      remoteSourceHint: "AgentTeam clones this repository into the member's working directory.", emptySourceHint: "Start with a new empty folder for this member.",
+      localSourceRequired: "Choose a local Git repository.", remoteSourceRequired: "Enter a Git repository URL.",
+      memberWorkingDirectory: "Member working directory", memberDirectoryPlaceholder: "<member name>",
       model: "Model", reasoning: "Reasoning effort",
       codexDefault: "Codex default", modelDefault: "Model default ({effort})", defaultOption: "Default",
       createMember: "Create Member", preparingMember: "Preparing Member Directory and conversation…", savingMember: "Saving…", dismissError: "Dismiss",
@@ -125,15 +126,16 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       createTeamDescription: "只需一个名称；成员和工作目录可以稍后添加。",
       editMember: "编辑成员", addToTeam: "添加到 {name}",
       editMemberDescription: "更新这位成员的原生会话；已有成员目录保持不变。",
-      createMemberDescription: "在空成员目录、本地 Git worktree 或远程 Git clone 中创建持久原生 Codex 会话。",
+      createMemberDescription: "选择成员从哪里开始工作；AgentTeam 会创建独立工作目录和原生 Codex 会话。",
       memberName: "成员名称", role: "职责", avatar: "头像", builtInAvatars: "内置头像", customAvatar: "自定义",
       chooseImage: "选择图片", currentImage: "当前头像", noImage: "未选择图片",
-      gitSource: "Git 仓库（可选）", chooseLocalGit: "选择本地 Git", noGitSource: "未选择本地仓库",
-      noLocalGit: "使用远程仓库", remoteGitUrl: "远程 Git 地址", remoteGitPlaceholder: "https://github.com/org/repo.git",
+      workingFiles: "工作文件", emptySource: "新建空目录", localSource: "本地 Git 仓库", remoteSource: "从 Git 地址克隆",
+      chooseLocalGit: "选择仓库", noGitSource: "尚未选择仓库", remoteGitUrl: "Git 仓库地址", remoteGitPlaceholder: "https://github.com/org/repo.git",
       choosingFolder: "选择中…", checkingFolder: "正在检查 Git 仓库…", directoryReadFailed: "无法读取所选文件夹",
-      gitRequired: "所选文件夹不是 Git 仓库。", localWorktreeHint: "在成员目录中创建隔离 Git worktree。",
-      remoteCloneHint: "将远程仓库 clone 到成员目录。", emptyMemberDirectoryHint: "创建空成员目录。",
-      finalWorkingDirectory: "最终工作目录：{path}", memberDirectoryPlaceholder: "<成员名称>",
+      gitRequired: "所选文件夹不是 Git 仓库。", localSourceHint: "AgentTeam 会创建隔离 worktree，不会修改源仓库。",
+      remoteSourceHint: "AgentTeam 会把该仓库克隆到成员工作目录。", emptySourceHint: "为这位成员创建一个新的空目录。",
+      localSourceRequired: "请选择一个本地 Git 仓库。", remoteSourceRequired: "请输入 Git 仓库地址。",
+      memberWorkingDirectory: "成员工作目录", memberDirectoryPlaceholder: "<成员名称>",
       model: "模型", reasoning: "推理强度",
       codexDefault: "跟随 Codex 默认", modelDefault: "模型默认（{effort}）", defaultOption: "默认",
       createMember: "创建成员", preparingMember: "正在准备成员目录并创建会话…", savingMember: "正在保存…", dismissError: "关闭",
@@ -213,12 +215,12 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
 
   function ensureStyles() {
     const existing = document.querySelector("#codex-agent-team-styles");
-    if (existing?.dataset.revision === "top-navigation-v5") return;
+    if (existing?.dataset.revision === "top-navigation-v6") return;
     existing?.remove();
     document.querySelector("#codex-agent-team-style-refinements")?.remove();
     const style = document.createElement("style");
     style.id = "codex-agent-team-styles";
-    style.dataset.revision = "top-navigation-v5";
+    style.dataset.revision = "top-navigation-v6";
     style.textContent = styles;
     document.head.append(style);
   }
@@ -819,18 +821,41 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
 
     let localGitDirectory = "";
     let remoteGitUrl = "";
+    let sourceMode = "empty";
     let sourceInspectionPending = false;
     let sourceInspectionError = null;
     let memberActions = null;
     if (!member) {
-      const directoryField = document.createElement("div");
-      directoryField.className = "cat-field";
-      const directoryLabel = document.createElement("label");
-      directoryLabel.textContent = t("gitSource");
+      const sourceField = document.createElement("div");
+      sourceField.className = "cat-field";
+      const sourceLabel = document.createElement("label");
+      sourceLabel.textContent = t("workingFiles");
+      const sourceToggle = document.createElement("div");
+      sourceToggle.className = "cat-work-source-toggle";
+      sourceToggle.setAttribute("role", "group");
+      sourceToggle.setAttribute("aria-label", sourceLabel.textContent);
+      const sourceButtons = new Map();
+      for (const [mode, label] of [["empty", "emptySource"], ["local", "localSource"], ["remote", "remoteSource"]]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cat-work-source-option";
+        button.textContent = t(label);
+        button.onclick = () => selectSourceMode(mode);
+        sourceButtons.set(mode, button);
+        sourceToggle.append(button);
+      }
+
+      const emptySourcePanel = document.createElement("div");
+      emptySourcePanel.className = "cat-work-source-panel";
+      const emptyHint = document.createElement("p");
+      emptyHint.className = "cat-work-source-hint";
+      emptyHint.textContent = t("emptySourceHint");
+      emptySourcePanel.append(emptyHint);
+
+      const localSourcePanel = document.createElement("div");
+      localSourcePanel.className = "cat-work-source-panel";
       const directoryPicker = document.createElement("div");
       directoryPicker.className = "cat-picker";
-      directoryPicker.setAttribute("role", "group");
-      directoryPicker.setAttribute("aria-label", directoryLabel.textContent);
       const directoryButton = document.createElement("button");
       directoryButton.type = "button";
       directoryButton.className = "cat-picker-button";
@@ -838,31 +863,61 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       const directoryValue = document.createElement("span");
       directoryValue.className = "cat-picker-value";
       directoryValue.textContent = t("noGitSource");
+      directoryPicker.append(directoryButton, directoryValue);
+      const localHint = document.createElement("p");
+      localHint.className = "cat-work-source-hint";
+      localSourcePanel.append(directoryPicker, localHint);
+
+      const remoteSourcePanel = document.createElement("div");
+      remoteSourcePanel.className = "cat-work-source-panel";
       const remoteInput = document.createElement("input");
       remoteInput.type = "text";
       remoteInput.placeholder = t("remoteGitPlaceholder");
       remoteInput.setAttribute("aria-label", t("remoteGitUrl"));
-      const sourceHint = document.createElement("p");
-      sourceHint.className = "cat-directory-hint";
-      const workingDirectoryPreview = document.createElement("p");
-      workingDirectoryPreview.className = "cat-directory-hint";
+      const remoteHint = document.createElement("p");
+      remoteHint.className = "cat-work-source-hint";
+      remoteSourcePanel.append(remoteInput, remoteHint);
+
+      const workingDirectoryPreview = document.createElement("div");
+      workingDirectoryPreview.className = "cat-workspace-preview";
+      const workingDirectoryLabel = document.createElement("span");
+      workingDirectoryLabel.className = "cat-workspace-preview-label";
+      workingDirectoryLabel.textContent = t("memberWorkingDirectory");
+      const workingDirectoryPath = document.createElement("span");
+      workingDirectoryPath.className = "cat-workspace-preview-path";
+      workingDirectoryPreview.append(workingDirectoryLabel, workingDirectoryPath);
 
       const renderGitSource = () => {
-        if (sourceInspectionPending) {
-          sourceHint.textContent = t("checkingFolder");
-        } else if (sourceInspectionError) {
-          sourceHint.textContent = sourceInspectionError;
-        } else if (localGitDirectory) {
-          sourceHint.textContent = t("localWorktreeHint");
-        } else if (remoteGitUrl) {
-          sourceHint.textContent = t("remoteCloneHint");
-        } else {
-          sourceHint.textContent = t("emptyMemberDirectoryHint");
-        }
+        for (const [mode, button] of sourceButtons) button.setAttribute("aria-pressed", String(sourceMode === mode));
+        emptySourcePanel.hidden = sourceMode !== "empty";
+        localSourcePanel.hidden = sourceMode !== "local";
+        remoteSourcePanel.hidden = sourceMode !== "remote";
+        localHint.textContent = sourceInspectionPending
+          ? t("checkingFolder")
+          : sourceInspectionError || (localGitDirectory ? t("localSourceHint") : t("localSourceRequired"));
+        localHint.classList.toggle("error", Boolean(sourceInspectionError));
+        remoteHint.textContent = remoteGitUrl ? t("remoteSourceHint") : t("remoteSourceRequired");
         const memberDirectory = name.value.trim() || t("memberDirectoryPlaceholder");
         const finalPath = `${team.teamDirectory.replace(/\/+$/, "")}/members/${memberDirectory}`;
-        workingDirectoryPreview.textContent = t("finalWorkingDirectory", { path: finalPath });
-        if (memberActions) memberActions.submit.disabled = sourceInspectionPending || Boolean(sourceInspectionError);
+        workingDirectoryPath.textContent = finalPath.replace(/^\/Users\/[^/]+(?=\/)/, "~");
+        workingDirectoryPath.title = finalPath;
+        const sourceMissing = (sourceMode === "local" && !localGitDirectory)
+          || (sourceMode === "remote" && !remoteGitUrl);
+        if (memberActions) memberActions.submit.disabled = sourceInspectionPending || Boolean(sourceInspectionError) || sourceMissing;
+      };
+      const selectSourceMode = (mode) => {
+        sourceMode = mode;
+        sourceInspectionPending = false;
+        sourceInspectionError = null;
+        if (mode !== "local") {
+          localGitDirectory = "";
+          directoryValue.textContent = t("noGitSource");
+        }
+        if (mode !== "remote") {
+          remoteGitUrl = "";
+          remoteInput.value = "";
+        }
+        renderGitSource();
       };
       directoryButton.onclick = async () => {
         const originalText = directoryButton.textContent;
@@ -880,7 +935,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
             renderGitSource();
             const requestId = `workspace-${Date.now()}-${state.fieldSequence = (state.fieldSequence ?? 0) + 1}`;
             state.workspaceInspectionCallbacks.set(requestId, (inspection) => {
-              if (localGitDirectory !== selected) return;
+              if (sourceMode !== "local" || localGitDirectory !== selected) return;
               sourceInspectionPending = false;
               if (inspection.error) {
                 sourceInspectionError = inspection.error;
@@ -895,7 +950,8 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
             send({ type: "inspectWorkingDirectory", requestId, path: selected });
           }
         } catch {
-          directoryValue.textContent = t("directoryReadFailed");
+          sourceInspectionError = t("directoryReadFailed");
+          renderGitSource();
         } finally {
           directoryButton.disabled = false;
           directoryButton.textContent = originalText;
@@ -903,16 +959,10 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       };
       remoteInput.oninput = () => {
         remoteGitUrl = remoteInput.value.trim();
-        if (remoteGitUrl) {
-          localGitDirectory = "";
-          directoryValue.textContent = t("noLocalGit");
-          sourceInspectionError = null;
-        }
         renderGitSource();
       };
-      directoryPicker.append(directoryButton, directoryValue);
-      directoryField.append(directoryLabel, directoryPicker, remoteInput, sourceHint, workingDirectoryPreview);
-      dialog.append(directoryField);
+      sourceField.append(sourceLabel, sourceToggle, emptySourcePanel, localSourcePanel, remoteSourcePanel, workingDirectoryPreview);
+      dialog.append(sourceField);
       name.addEventListener("input", renderGitSource);
       renderGitSource();
     }

@@ -13,3 +13,4 @@
 - Fail closed when required experimental Codex Desktop capabilities are unavailable.
 - Use the shorter **AgentTeam** label for the in-app projection, detect installed terminal applications once per Runtime, show their native macOS icons, and open them from one Team-header menu through native AppleScript automation.
 - Keep member initialization and successful message confirmations concise without exposing internal routing terminology.
+- Clarify member creation with one working-files choice at a time and a labeled destination preview.

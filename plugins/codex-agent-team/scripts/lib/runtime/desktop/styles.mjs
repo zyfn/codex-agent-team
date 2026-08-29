@@ -127,6 +127,7 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-text-action,
   .cat-picker-button,
   .cat-avatar-source-option,
+  .cat-work-source-option,
   .cat-avatar-preset,
   .cat-error-dismiss {
     font: inherit;
@@ -162,6 +163,7 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-member-open:focus-visible,
   .cat-picker-button:focus-visible,
   .cat-avatar-source-option:focus-visible,
+  .cat-work-source-option:focus-visible,
   .cat-avatar-preset:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--cat-blue) 40%, transparent);
     outline-offset: 2px;
@@ -441,13 +443,57 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-avatar-preset[aria-pressed="true"] { border-color: var(--cat-blue); }
   .cat-avatar-preset img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 
+  .cat-work-source-toggle {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3px;
+    padding: 3px;
+    border-radius: 11px;
+    background: color-mix(in srgb, currentColor 7%, transparent);
+  }
+
+  .cat-work-source-option {
+    min-width: 0;
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: transparent;
+    color: var(--cat-muted);
+    font-size: 11px;
+    font-weight: 560;
+  }
+
+  .cat-work-source-option:hover { color: var(--text-primary, #f5f5f7); }
+  .cat-work-source-option[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+    box-shadow: 0 1px 5px #0003, inset 0 1px #ffffff0c;
+    color: var(--text-primary, #f5f5f7);
+  }
+
+  .cat-work-source-panel { display: grid; gap: 7px; min-height: 54px; align-content: center; }
+  .cat-work-source-panel[hidden] { display: none; }
+  .cat-work-source-hint { margin: 0; color: var(--cat-muted); font-size: 10px; line-height: 1.45; }
+  .cat-work-source-hint.error { color: #ff9fa5; }
+
+  .cat-workspace-preview {
+    display: grid;
+    gap: 3px;
+    margin-top: 2px;
+    border-radius: 11px;
+    padding: 10px 11px;
+    background: color-mix(in srgb, currentColor 4.5%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 7%, transparent);
+  }
+
+  .cat-workspace-preview-label { color: var(--cat-muted); font-size: 9px; font-weight: 570; letter-spacing: .025em; }
+  .cat-workspace-preview-path { overflow: hidden; color: var(--text-primary, #f5f5f7); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
   .cat-picker { gap: 10px; min-height: 42px; border: 1px solid color-mix(in srgb, currentColor 11%, transparent); border-radius: 12px; padding: 7px; background: color-mix(in srgb, currentColor 3%, transparent); }
   .cat-picker-button { flex: 0 0 auto; border: 0; border-radius: 8px; padding: 7px 10px; background: color-mix(in srgb, currentColor 9%, transparent); color: inherit; font-size: 11px; font-weight: 560; }
   .cat-picker-button:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
   .cat-picker-button:disabled { cursor: progress; opacity: .65; }
   .cat-picker-value { min-width: 0; overflow: hidden; color: var(--cat-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
   .cat-picker-preview { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; object-fit: cover; }
-  .cat-directory-hint { margin: 0; color: var(--cat-muted); font-size: 10px; line-height: 1.45; }
   .cat-hidden-input { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; }
 
   @keyframes catPulse { 50% { opacity: .45; transform: scale(.78); } }
@@ -467,6 +513,7 @@ export const TEAM_UI_STYLES = String.raw`
     .cat-member-row-actions { justify-self: start; opacity: 1; }
     .cat-team-directory-members { padding-inline: 12px; }
     .cat-form-grid { grid-template-columns: 1fr; }
+    .cat-work-source-toggle { grid-template-columns: 1fr; }
   }
 
   @media (prefers-reduced-motion: reduce) {
