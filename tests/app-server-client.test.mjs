@@ -1,75 +1,119 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { EventEmitter } from "node:events";
 import test from "node:test";
 
-import { AppServerClient } from "../scripts/lib/app-server-client.mjs";
+import { AppServerClient } from "../plugins/codex-agent-team/scripts/lib/runtime/app-server.mjs";
 
-test("the runtime speaks WebSocket to the default Codex daemon Unix socket", async () => {
-  const observed = [];
-  let socketPath;
-  class FakeSocket extends EventEmitter {
-    write(chunk) {
-      const bytes = Buffer.from(chunk);
-      if (bytes.toString("utf8").startsWith("GET /rpc")) {
-        const key = bytes.toString("utf8").match(/Sec-WebSocket-Key: ([^\r]+)/i)?.[1];
-        const accept = createHash("sha1")
-          .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
-          .digest("base64");
-        queueMicrotask(() => this.emit("data", Buffer.from(
-          `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`
-        )));
-        return true;
-      }
-      const message = decodeClientFrame(bytes);
-      observed.push(message);
-      if (message.id !== undefined) {
-        const result = message.method === "thread/list" ? { data: [], nextCursor: null } : {};
-        queueMicrotask(() => this.emit("data", encodeServerFrame({ id: message.id, result })));
-      }
-      return true;
-    }
-    end() { this.emit("close"); }
-    destroy() { this.emit("close"); }
-  }
-  const client = new AppServerClient({
-    socketPath: "/tmp/app-server-control.sock",
-    createSocketImpl(path) {
-      socketPath = path;
-      const socket = new FakeSocket();
-      queueMicrotask(() => socket.emit("connect"));
+test("CodexAgentTeam uses the platform WebSocket directly against the official loopback endpoint", async () => {
+  let socketTarget;
+  const socket = new FakeWebSocket((message) => {
+    if (message.method === "initialize") socket.receive({ id: message.id, result: {} });
+    if (message.method === "config/read") socket.receive({ id: message.id, result: { config: {} } });
+  });
+  const connection = new AppServerClient({
+    webSocketUrl: "ws://127.0.0.1:9338/rpc",
+    createWebSocketImpl: (target) => {
+      socketTarget = target;
+      socket.open();
       return socket;
     }
   });
 
-  await client.connect();
-  const listed = await client.request("thread/list", { limit: 10 });
-
-  assert.equal(socketPath, "/tmp/app-server-control.sock");
-  assert.equal(observed[0].method, "initialize");
-  assert.equal(observed[1].method, "initialized");
-  assert.deepEqual(listed, { data: [], nextCursor: null });
+  await connection.connect();
+  assert.deepEqual(await connection.request("config/read"), { config: {} });
+  assert.equal(socketTarget, "ws://127.0.0.1:9338/rpc");
+  await connection.close();
 });
 
-function decodeClientFrame(frame) {
-  const masked = (frame[1] & 0x80) !== 0;
-  assert.equal(masked, true);
-  let length = frame[1] & 0x7f;
-  let offset = 2;
-  if (length === 126) {
-    length = frame.readUInt16BE(2);
-    offset = 4;
-  } else if (length === 127) {
-    length = Number(frame.readBigUInt64BE(2));
-    offset = 10;
-  }
-  const mask = frame.subarray(offset, offset + 4);
-  const payload = Buffer.from(frame.subarray(offset + 4, offset + 4 + length));
-  for (let index = 0; index < payload.length; index += 1) payload[index] ^= mask[index % 4];
-  return JSON.parse(payload.toString("utf8"));
-}
+test("the App Server endpoint must stay on loopback", () => {
+  assert.throws(() => new AppServerClient({ webSocketUrl: "ws://example.com:9338" }), /loopback/);
+  assert.throws(() => new AppServerClient({ webSocketUrl: "wss://127.0.0.1:9338" }), /ws:\/\//);
+});
 
-function encodeServerFrame(value) {
-  const payload = Buffer.from(JSON.stringify(value));
-  return Buffer.concat([Buffer.from([0x81, payload.length]), payload]);
+test("the observer never invents an answer to an App Server user request", async () => {
+  const observed = [];
+  const socket = new FakeWebSocket((message) => {
+    observed.push(message);
+    if (message.method === "initialize") socket.receive({ id: message.id, result: {} });
+  });
+  const connection = new AppServerClient({
+    webSocketUrl: "ws://127.0.0.1:9338",
+    createWebSocketImpl: () => { socket.open(); return socket; }
+  });
+  await connection.connect();
+
+  socket.receive({ id: 99, method: "item/tool/requestUserInput", params: {} });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const response = observed.find(({ id }) => id === 99);
+  assert.equal(response.error.code, -32601);
+  assert.match(response.error.message, /does not handle server request/);
+  await connection.close();
+});
+
+test("close resolves only after the transport has actually closed", async () => {
+  const socket = new FakeWebSocket((message) => {
+    if (message.method === "initialize") socket.receive({ id: message.id, result: {} });
+  }, { automaticClose: false });
+  const connection = new AppServerClient({
+    webSocketUrl: "ws://127.0.0.1:9338",
+    createWebSocketImpl: () => { socket.open(); return socket; }
+  });
+  await connection.connect();
+
+  let closed = false;
+  const closing = connection.close().then(() => { closed = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(closed, false);
+  socket.finishClose();
+  await closing;
+  assert.equal(closed, true);
+});
+
+class FakeWebSocket {
+  constructor(onMessage, { automaticClose = true } = {}) {
+    this.onMessage = onMessage;
+    this.automaticClose = automaticClose;
+    this.readyState = 0;
+    this.listeners = new Map();
+  }
+
+  addEventListener(type, listener) {
+    const listeners = this.listeners.get(type) ?? new Set();
+    listeners.add(listener);
+    this.listeners.set(type, listeners);
+  }
+
+  removeEventListener(type, listener) {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  open() {
+    queueMicrotask(() => {
+      this.readyState = 1;
+      this.#emit("open", {});
+    });
+  }
+
+  send(value) {
+    const message = JSON.parse(String(value));
+    queueMicrotask(() => this.onMessage(message));
+  }
+
+  receive(message) {
+    queueMicrotask(() => this.#emit("message", { data: JSON.stringify(message) }));
+  }
+
+  close() {
+    this.readyState = 2;
+    if (this.automaticClose) queueMicrotask(() => this.finishClose());
+  }
+
+  finishClose() {
+    this.readyState = 3;
+    this.#emit("close", {});
+  }
+
+  #emit(type, event) {
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
+  }
 }

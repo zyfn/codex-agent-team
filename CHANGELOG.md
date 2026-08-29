@@ -1,0 +1,13 @@
+# Changelog
+
+## Unreleased
+
+- Organize native Codex Projects and conversations as persistent Teams and Members.
+- Add a global CodexAgentTeam Dashboard with native conversation navigation and runtime status.
+- Create each Member in an empty Team-owned directory, a local Git worktree, or a remote Git clone.
+- Support responsibilities, built-in or custom avatars, and initial Codex model settings.
+- Send one explicit message to one teammate without broadcasts, queues, automatic reply chains, or copied conversation history.
+- Open the same native member conversations in optional Ghostty or cmux split layouts.
+- Run in a separate Codex Desktop with an isolated profile and one temporary official Codex App Server.
+- Preserve native conversations, Team data, Member Directories, worktrees, branches, and avatars when a run ends or a member is removed.
+- Fail closed when required experimental Codex Desktop capabilities are unavailable.

@@ -1,18 +1,37 @@
 {
   "name": "codex-agent-team",
-  "version": "0.1.0+codex.20260817044738",
-  "description": "Group native Codex projects and conversations into persistent teams (macOS preview).",
+  "version": "0.0.0+codex.20260829052346",
+  "description": "Organize native Codex conversations into persistent teams (macOS preview).",
   "author": {
-    "name": "AgentTeam contributors"
+    "name": "zyfn",
+    "url": "https://github.com/zyfn"
   },
+  "homepage": "https://github.com/zyfn/codex-agent-team#readme",
+  "repository": "https://github.com/zyfn/codex-agent-team",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "agents",
+    "teams",
+    "collaboration"
+  ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "AgentTeam",
-    "shortDescription": "Persistent teams built from native Codex projects and conversations.",
-    "longDescription": "Adds a top-level Team section to Codex Desktop. Each Team is a native Codex project and each member is a native persistent conversation with an independent workspace.",
-    "developerName": "AgentTeam contributors",
+    "displayName": "CodexAgentTeam",
+    "shortDescription": "Turn native Codex conversations into persistent teams.",
+    "longDescription": "Organize native Codex conversations into persistent teams with safe Member Directories, a global Dashboard, explicit teammate collaboration, and optional terminal layouts.",
+    "developerName": "zyfn",
     "category": "Productivity",
-    "capabilities": [],
-    "defaultPrompt": "Use $codex-agent-team:setup to enter Team mode."
+    "capabilities": [
+      "Native Codex conversation teams",
+      "Persistent member conversations",
+      "Safe Team-owned member directories",
+      "Explicit one-hop collaboration",
+      "Ghostty and cmux terminal layouts"
+    ],
+    "defaultPrompt": [
+      "Use $codex-agent-team:launch to launch CodexAgentTeam.",
+      "Use $codex-agent-team:collaborate to inspect Team context or contact a teammate."
+    ]
   }
 }

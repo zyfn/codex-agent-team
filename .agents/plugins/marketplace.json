@@ -1,7 +1,7 @@
 {
-  "name": "codex-agent-team-local",
+  "name": "codex-agent-team",
   "interface": {
-    "displayName": "Codex Agent Team Local"
+    "displayName": "CodexAgentTeam"
   },
   "plugins": [
     {

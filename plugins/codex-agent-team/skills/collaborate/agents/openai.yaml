@@ -1,0 +1,7 @@
+interface:
+  display_name: "Collaborate in CodexAgentTeam"
+  short_description: "View teammates or send one direct message"
+  default_prompt: "Use $codex-agent-team:collaborate to inspect my Team context or send one explicit message to a teammate."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Launch CodexAgentTeam"
+  short_description: "Launch, check, or diagnose CodexAgentTeam"
+  default_prompt: "Use $codex-agent-team:launch to launch CodexAgentTeam or report its current state."
+
+policy:
+  allow_implicit_invocation: true

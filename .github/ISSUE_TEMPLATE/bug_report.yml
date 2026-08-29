@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible CodexAgentTeam failure
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not report security vulnerabilities here. Follow SECURITY.md instead.
+  - type: input
+    id: desktop-version
+    attributes:
+      label: Codex Desktop version
+      placeholder: "26.814.41407"
+    validations:
+      required: true
+  - type: input
+    id: cli-version
+    attributes:
+      label: Bundled Codex CLI version
+      placeholder: "codex-cli 0.148.0-alpha.15"
+    validations:
+      required: true
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS version and architecture
+      placeholder: "macOS 15.6 · Apple silicon"
+    validations:
+      required: true
+  - type: dropdown
+    id: lifecycle-stage
+    attributes:
+      label: Lifecycle stage
+      options:
+        - Opening CodexAgentTeam
+        - CodexAgentTeam active
+        - Closing CodexAgentTeam
+        - Ordinary Codex after a CodexAgentTeam run
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the smallest sequence that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: CodexAgentTeam diagnostics
+      description: Ask `$codex-agent-team:launch` to diagnose the failure, then remove sensitive paths or content before pasting.
+    validations:
+      required: true
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, private source, conversation content, and sensitive local paths.
+          required: true

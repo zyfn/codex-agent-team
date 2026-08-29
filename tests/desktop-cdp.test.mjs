@@ -3,35 +3,8 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 
 import {
-  DesktopCdpClient,
-  watchCdpEndpoint
-} from "../scripts/lib/desktop-cdp.mjs";
-
-test("CDP endpoint watchdog reports Desktop exit even when the WebSocket never closes", async () => {
-  let probes = 0;
-  let disconnected = 0;
-  let resolveDisconnect;
-  const disconnectedPromise = new Promise((resolve) => { resolveDisconnect = resolve; });
-  const dispose = watchCdpEndpoint(9339, () => {
-    disconnected += 1;
-    resolveDisconnect();
-  }, {
-    intervalMs: 2,
-    timeoutMs: 20,
-    fetchImpl: async () => {
-      probes += 1;
-      if (probes === 1) return { ok: true };
-      throw new Error("connection refused");
-    }
-  });
-
-  await disconnectedPromise;
-  await new Promise((resolve) => setTimeout(resolve, 8));
-  dispose();
-
-  assert.equal(disconnected, 1);
-  assert.equal(probes, 2);
-});
+  CdpClient
+} from "../plugins/codex-agent-team/scripts/lib/runtime/desktop/cdp.mjs";
 
 test("CDP connects only to the exact Codex main page target", async () => {
   let openedUrl;
@@ -47,7 +20,7 @@ test("CDP connects only to the exact Codex main page target", async () => {
     }
     close() {}
   }
-  const client = await DesktopCdpClient.connect(9339, {
+  const client = await CdpClient.connect(9339, {
     fetchImpl: async () => ({
       ok: true,
       async json() {
@@ -62,6 +35,19 @@ test("CDP connects only to the exact Codex main page target", async () => {
 
   assert.equal(openedUrl, "ws://main");
   assert.deepEqual(await client.request("Runtime.enable"), { ok: true });
+  client.close();
+});
+
+test("CDP refuses to guess when the exact Codex main page target is absent", async () => {
+  await assert.rejects(CdpClient.connect(9339, {
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return [{ type: "page", url: "app://-/other.html", webSocketDebuggerUrl: "ws://other" }];
+      }
+    }),
+    WebSocketImpl: class {}
+  }), /main CDP target was not found/);
 });
 
 test("CDP reports when Codex replaces or closes its page target", async () => {
@@ -75,7 +61,7 @@ test("CDP reports when Codex replaces or closes its page target", async () => {
     send() {}
     close() {}
   }
-  const client = await DesktopCdpClient.connect(9339, {
+  const client = await CdpClient.connect(9339, {
     fetchImpl: async () => ({
       ok: true,
       async json() {
@@ -91,4 +77,27 @@ test("CDP reports when Codex replaces or closes its page target", async () => {
   socket.emit("close");
 
   assert.equal(disconnected, 1);
+  client.close();
+});
+
+test("CDP target discovery and WebSocket setup are both bounded", async () => {
+  await assert.rejects(CdpClient.connect(9339, {
+    fetchImpl: () => new Promise(() => {}),
+    WebSocketImpl: class {},
+    connectTimeoutMs: 20
+  }), /target discovery timed out after 20ms/);
+
+  class NeverOpenWebSocket extends EventEmitter {
+    close() { this.closed = true; }
+  }
+  await assert.rejects(CdpClient.connect(9339, {
+    fetchImpl: async () => ({
+      ok: true,
+      async json() {
+        return [{ type: "page", url: "app://-/index.html", webSocketDebuggerUrl: "ws://main" }];
+      }
+    }),
+    WebSocketImpl: NeverOpenWebSocket,
+    connectTimeoutMs: 20
+  }), /WebSocket connection timed out after 20ms/);
 });
