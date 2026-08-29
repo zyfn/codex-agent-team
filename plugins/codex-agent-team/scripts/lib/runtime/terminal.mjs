@@ -1,6 +1,7 @@
 import { access } from "node:fs/promises";
-import { constants } from "node:fs";
+import { accessSync, constants } from "node:fs";
 import { execFile } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
 
 import { buildMemberResumeCommand } from "./diagnostics.mjs";
@@ -11,6 +12,14 @@ const execFileAsync = promisify(execFile);
 
 export function createTeamTerminal({ manager, paths, codexCli, terminals }) {
   return {
+    async availability() {
+      return Object.fromEntries(await Promise.all(
+        Object.entries(terminals).map(async ([name, terminal]) => [
+          name,
+          typeof terminal.available === "function" ? await terminal.available() : false
+        ])
+      ));
+    },
     async open({ teamId, terminal }) {
       const team = await manager.readTeam(required(teamId, "Team id"));
       if (!team.members.length) throw new Error(`Team "${team.name}" has no members to open`);
@@ -18,6 +27,9 @@ export function createTeamTerminal({ manager, paths, codexCli, terminals }) {
       if (!runtime.appServerUrl) throw new Error("CodexAgentTeam App Server endpoint is unavailable");
       const selected = terminals[required(terminal, "Terminal")];
       if (!selected) throw new Error(`Unsupported terminal: ${terminal}`);
+      if (typeof selected.available === "function" && !(await selected.available())) {
+        throw new Error(`${terminal} is not installed`);
+      }
       const layout = {
         id: team.teamId,
         title: `CodexAgentTeam · ${team.name}`,
@@ -45,9 +57,19 @@ export function createTeamTerminal({ manager, paths, codexCli, terminals }) {
 
 export function createGhosttyTerminal({
   execFile: run = execFileAsync,
-  osascript = "/usr/bin/osascript"
+  osascript = "/usr/bin/osascript",
+  ghosttyApp = "/Applications/Ghostty.app",
+  accessFile = access
 } = {}) {
   return {
+    async available() {
+      try {
+        await accessFile(ghosttyApp);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     async open(layout) {
       const { stdout } = await run(osascript, ["-e", buildGhosttyScript(layout)], {
         encoding: "utf8",
@@ -61,10 +83,13 @@ export function createGhosttyTerminal({
 
 export function createCmuxTerminal({
   execFile: run = execFileAsync,
-  cmux = resolveCmuxExecutable(),
+  cmux = null,
   open = "/usr/bin/open",
-  delay: wait = delay
+  delay: wait = delay,
+  env = process.env,
+  accessFile = access
 } = {}) {
+  cmux ??= resolveCmuxExecutable(env);
   async function command(args) {
     return run(cmux, args, {
       encoding: "utf8",
@@ -75,22 +100,33 @@ export function createCmuxTerminal({
 
   async function ensureRunning() {
     try {
-      await access(cmux, constants.X_OK);
+      await accessFile(cmux, constants.X_OK);
     } catch {
-      throw new Error("cmux is not installed in /Applications");
+      throw new Error("cmux is not installed or is not available on PATH");
     }
+    let accessError = null;
     try {
       await command(["ping"]);
       return;
-    } catch {}
-    await run(open, ["-a", "cmux"], { timeout: 5_000 });
+    } catch (error) {
+      accessError = error;
+    }
+    try {
+      await run(open, ["-a", "cmux"], { timeout: 5_000 });
+    } catch (error) {
+      if (isCmuxAccessDenied(error) || isCmuxAccessDenied(accessError)) throw cmuxAccessError(error ?? accessError);
+      throw error;
+    }
     for (let attempt = 0; attempt < 50; attempt += 1) {
       await wait(100);
       try {
         await command(["ping"]);
         return;
-      } catch {}
+      } catch (error) {
+        if (isCmuxAccessDenied(error)) throw cmuxAccessError(error);
+      }
     }
+    if (isCmuxAccessDenied(accessError)) throw cmuxAccessError(accessError);
     throw new Error("cmux did not become ready");
   }
 
@@ -101,6 +137,14 @@ export function createCmuxTerminal({
   }
 
   return {
+    async available() {
+      try {
+        await accessFile(cmux, constants.X_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    },
     async open(layout) {
       await ensureRunning();
       const existing = await findWorkspace(layout.title);
@@ -213,8 +257,44 @@ function terminalCommand({ title, resumeCommand }) {
   return `/bin/zsh -lc ${shellQuote(body)}`;
 }
 
-function resolveCmuxExecutable(env = process.env) {
-  return env.CODEX_AGENT_TEAM_CMUX_PATH || "/Applications/cmux.app/Contents/Resources/bin/cmux";
+export function resolveCmuxExecutable(env = process.env) {
+  if (env.CODEX_AGENT_TEAM_CMUX_PATH) return env.CODEX_AGENT_TEAM_CMUX_PATH;
+  const pathCandidates = String(env.PATH ?? "")
+    .split(path.delimiter)
+    .filter(Boolean)
+    .map((directory) => path.join(directory, "cmux"));
+  const candidates = [
+    ...pathCandidates,
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+    "/usr/local/bin/cmux"
+  ];
+  return candidates.find((candidate) => isExecutable(candidate))
+    ?? "/Applications/cmux.app/Contents/Resources/bin/cmux";
+}
+
+function isExecutable(file) {
+  try {
+    accessSync(file, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isCmuxAccessDenied(error) {
+  return /access denied|only processes started inside cmux can connect/i.test(errorText(error));
+}
+
+function cmuxAccessError(cause) {
+  return new Error(
+    "cmux control access is restricted; start cmux with CMUX_SOCKET_MODE=allowAll, then retry",
+    { cause }
+  );
+}
+
+function errorText(error) {
+  return [error?.message, error?.stderr, error?.stdout].filter(Boolean).join(" ");
 }
 
 function reference(value, kind) {

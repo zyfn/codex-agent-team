@@ -273,27 +273,34 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-terminal-actions {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 7px;
     margin-right: auto;
-    border-radius: 9px;
-    padding: 2px;
-    background: color-mix(in srgb, currentColor 5%, transparent);
+    padding: 2px 0;
   }
 
-  .cat-terminal-label { padding: 0 6px; color: var(--cat-muted); font-size: 10px; font-weight: 540; }
+  .cat-terminal-label { color: var(--cat-muted); font-size: 10px; font-weight: 560; letter-spacing: .01em; }
+  .cat-terminal-options { display: inline-flex; align-items: center; gap: 4px; }
 
   .cat-terminal-action {
-    border: 0;
     border-radius: 7px;
-    padding: 4px 7px;
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+    background: color-mix(in srgb, currentColor 5%, transparent);
     color: var(--cat-muted);
     font-size: 10px;
     font-weight: 600;
   }
 
-  .cat-terminal-action:hover { background: color-mix(in srgb, currentColor 8%, transparent); color: var(--text-primary, #f5f5f7); }
-  .cat-terminal-action:disabled { cursor: default; opacity: .35; }
+  .cat-terminal-logo-wrap,
+  .cat-terminal-logo { width: 14px; height: 14px; flex: 0 0 14px; }
+  .cat-terminal-logo.ghostty { color: #b6a3ff; }
+  .cat-terminal-logo.cmux { color: #7dc9ff; }
+
+  .cat-terminal-action:hover { border-color: color-mix(in srgb, currentColor 18%, transparent); background: color-mix(in srgb, currentColor 10%, transparent); color: var(--text-primary, #f5f5f7); }
+  .cat-terminal-action:disabled { cursor: not-allowed; opacity: .28; filter: grayscale(1); }
 
   .cat-text-action {
     border: 0;

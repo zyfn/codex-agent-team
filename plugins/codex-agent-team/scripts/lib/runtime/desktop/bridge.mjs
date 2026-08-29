@@ -41,6 +41,7 @@ export function createDesktopBridge({
   let navigation = initialNavigation;
   let desktopTeams = initialDesktopTeams;
   let terminalLauncher = initialTerminalLauncher;
+  let terminalAvailability = null;
   let builtInAvatars = initialBuiltInAvatars;
   let connected = false;
   let closing = false;
@@ -91,6 +92,9 @@ export function createDesktopBridge({
           cmux: createCmuxTerminal()
         }
       }) : null);
+      const activeTerminalAvailability = typeof activeTerminal?.availability === "function"
+        ? await activeTerminal.availability()
+        : {};
       await Promise.all([
         waitForNavigation(activeNavigation),
         waitForNavigation(activeDesktopTeams)
@@ -101,6 +105,7 @@ export function createDesktopBridge({
       navigation = activeNavigation;
       desktopTeams = activeDesktopTeams;
       terminalLauncher = activeTerminal;
+      terminalAvailability = activeTerminalAvailability;
       builtInAvatars ??= await loadBuiltInAvatars();
       await cdp.request("Runtime.enable");
       await cdp.request("Page.enable");
@@ -189,6 +194,8 @@ export function createDesktopBridge({
     manager = null;
     navigation = null;
     desktopTeams = null;
+    terminalLauncher = null;
+    terminalAvailability = null;
     bootstrapScriptId = null;
     connected = false;
     closing = false;
@@ -244,6 +251,7 @@ export function createDesktopBridge({
   async function buildSnapshot(error, includeAssets) {
     const value = {
       ...await manager.snapshot(),
+      terminalAvailability: terminalAvailability ?? {},
       ...(includeAssets ? { builtInAvatars } : {})
     };
     return error ? { ...value, error } : value;

@@ -22,7 +22,7 @@ CodexAgentTeam 把原生 Codex 会话组织成长期存在的团队。每位成�
 > [!IMPORTANT]
 > CodexAgentTeam 当前是 macOS 实验预览版。原生 Thread 与 App Server 事件始终是权威事实；全局 Desktop 入口目前依赖一层很小的、失败关闭的 CDP 适配器。
 
-![CodexAgentTeam Dashboard 展示一个 Team 与对应的原生 Codex 会话成员](./docs/assets/dashboard.png)
+![AgentTeam Dashboard 展示一个 Team 与对应的原生 Codex 会话成员](./docs/assets/dashboard.png)
 
 ## 你会得到什么
 
@@ -54,13 +54,13 @@ codex plugin add codex-agent-team@codex-agent-team
 
 ### 启动 CodexAgentTeam
 
-调用 `$codex-agent-team:launch`，要求启动 CodexAgentTeam。Skill 完成兼容性检查后，会启动一个独立 Codex 窗口，并在其全局导航中加入 **CodexAgentTeam** 入口。插件不会关闭或重启当前 Codex。
+调用 `$codex-agent-team:launch`，要求启动 CodexAgentTeam。Skill 完成兼容性检查后，会启动一个独立 Codex 窗口，并在其全局导航中加入 **AgentTeam** 入口。插件不会关闭或重启当前 Codex。
 
 CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 Codex，再在 CodexAgentTeam 窗口继续工作。使用 **Command-Q** 退出 CodexAgentTeam Codex 后，本次临时官方 App Server 会结束并释放成员 Thread。Team、成员目录与原生 Thread 会继续保留，下一次可从 CodexAgentTeam 或普通 Codex 中继续。
 
 ### 创建 Team
 
-1. 从全局导航打开 **CodexAgentTeam**。
+1. 从全局导航打开 **AgentTeam**。
 2. 创建一个 Team。
 3. 为成员设置名称、职责、头像、初始模型配置和可选 Git 来源。
 4. 点击成员，进入它的原始 Codex 会话。
@@ -117,6 +117,8 @@ CodexAgentTeam 不修改 Codex SQLite、rollout 文件、`config.toml`、认证�
 ## 可选终端视图
 
 在 Dashboard 中选择 **Ghostty** 或 **cmux**，即可把同一批原生成员 Thread 放进一个标签页或工作区，并使用成员标题分屏。这只是 Team 的另一种视图，不是另一套 Session 模型。
+
+Runtime 启动时只检测一次终端安装情况；未安装的应用会置灰。cmux 默认只接受其自身启动进程的控制命令。若要从 Codex Dashboard 使用 cmux 按钮，需要以 `CMUX_SOCKET_MODE=allowAll` 启动 cmux；这会允许同一 macOS 用户下的其他本地进程访问 cmux 控制 socket。不希望扩大本地访问范围时，请使用 Ghostty。
 
 ## 安全与兼容性
 

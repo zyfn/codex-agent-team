@@ -112,7 +112,7 @@ test("CodexAgentTeam is a native-looking top-level navigation item and leaves Pr
   }, "codexAgentTeamBridge");
 
   assert.match(expression, /data-codex-agent-team-nav/);
-  assert.match(expression, /CodexAgentTeam/);
+  assert.match(expression, /AgentTeam/);
   assert.match(expression, /send\(\{ type: "refresh" \}\);\s*showPanel\(\)/);
   assert.match(expression, /cloneNode\(true\)/);
   assert.match(expression, /insertAdjacentElement\("afterend", root\)/);
@@ -149,6 +149,11 @@ test("CodexAgentTeam is a native-looking top-level navigation item and leaves Pr
   assert.match(expression, /Open in Ghostty/);
   assert.match(expression, /在 cmux 中打开/);
   assert.match(expression, /cat-terminal-actions/);
+  assert.match(expression, /cat-terminal-options/);
+  assert.match(expression, /cat-terminal-logo/);
+  assert.match(expression, /terminalAvailability/);
+  assert.match(expression, /Ghostty is not installed/);
+  assert.match(expression, /未安装 cmux/);
   assert.match(expression, /expandedTeamIds/);
   assert.match(expression, /aria-expanded/);
   assert.match(expression, /cat-member-carousel/);

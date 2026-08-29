@@ -22,7 +22,7 @@ CodexAgentTeam organizes native Codex conversations into durable teams. Each mem
 > [!IMPORTANT]
 > CodexAgentTeam is an experimental macOS preview. Native Threads and App Server events remain authoritative; the global Desktop entry currently depends on a small, fail-closed CDP adapter.
 
-![CodexAgentTeam Dashboard showing one Team and its native Codex conversation members](./docs/assets/dashboard.png)
+![AgentTeam Dashboard showing one Team and its native Codex conversation members](./docs/assets/dashboard.png)
 
 ## What you get
 
@@ -54,13 +54,13 @@ Restart Codex and create a new conversation so the plugin Skills are discovered.
 
 ### Launch CodexAgentTeam
 
-Invoke `$codex-agent-team:launch` and ask to launch CodexAgentTeam. The Skill performs compatibility checks, then starts a separate Codex window with a **CodexAgentTeam** entry in its global navigation. Your current Codex is never closed or restarted by the plugin.
+Invoke `$codex-agent-team:launch` and ask to launch CodexAgentTeam. The Skill performs compatibility checks, then starts a separate Codex window with an **AgentTeam** entry in its global navigation. Your current Codex is never closed or restarted by the plugin.
 
 Once the CodexAgentTeam window is ready, use **Command-Q** to quit the current ordinary Codex and continue in CodexAgentTeam. Closing the CodexAgentTeam Codex with **Command-Q** ends its temporary official App Server and releases its member Threads. Teams, member directories, and native Threads remain available the next time you open CodexAgentTeam or ordinary Codex.
 
 ### Create a Team
 
-1. Open **CodexAgentTeam** from the global navigation.
+1. Open **AgentTeam** from the global navigation.
 2. Create a Team.
 3. Add members with a name, responsibility, avatar, initial model settings, and an optional Git source.
 4. Click a member to enter its original Codex conversation.
@@ -117,6 +117,8 @@ CodexAgentTeam does not modify Codex SQLite, rollout files, `config.toml`, authe
 ## Optional terminal view
 
 From the Dashboard, open a Team in **Ghostty** or **cmux**. CodexAgentTeam resumes the same native member Threads in one tab or workspace with split panes and member titles. This is another view over the Team, not another session model.
+
+Terminal availability is detected once when the Runtime starts; applications that are not installed are shown disabled. cmux defaults to accepting control commands only from processes it started. To use the Dashboard cmux button from Codex, start cmux with `CMUX_SOCKET_MODE=allowAll`; this allows other processes running as the same macOS user to access the cmux control socket. Use Ghostty if you do not want that broader local access mode.
 
 ## Safety and compatibility
 

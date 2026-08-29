@@ -8,6 +8,8 @@ import test from "node:test";
 import {
   buildGhosttyScript,
   createCmuxTerminal,
+  createGhosttyTerminal,
+  resolveCmuxExecutable,
   splitPlan,
   createTeamTerminal
 } from "../plugins/codex-agent-team/scripts/lib/runtime/terminal.mjs";
@@ -63,6 +65,35 @@ test("terminal layouts form a compact grid without inventing pane state", () => 
     { index: 2, target: 0, direction: "down" },
     { index: 3, target: 1, direction: "down" }
   ]);
+});
+
+test("terminal availability is detected without opening either application", async () => {
+  const launcher = createTeamTerminal({
+    manager: null,
+    paths: null,
+    codexCli: null,
+    terminals: {
+      ghostty: createGhosttyTerminal({ async accessFile() {} }),
+      cmux: createCmuxTerminal({
+        cmux: "/missing/cmux",
+        async accessFile() { throw Object.assign(new Error("missing"), { code: "ENOENT" }); }
+      })
+    }
+  });
+  assert.deepEqual(await launcher.availability(), { ghostty: true, cmux: false });
+});
+
+test("cmux resolves a PATH-installed executable before the app bundle fallback", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-cmux-path-"));
+  const bin = path.join(root, "bin");
+  const executable = path.join(bin, "cmux");
+  await import("node:fs/promises").then(async ({ chmod, mkdir }) => {
+    await mkdir(bin, { recursive: true });
+    await writeFile(executable, "#!/bin/sh\n");
+    await chmod(executable, 0o755);
+  });
+  assert.equal(resolveCmuxExecutable({ PATH: bin }), executable);
+  await rm(root, { recursive: true, force: true });
 });
 
 test("Ghostty uses one native tab with native split commands", async (context) => {
@@ -126,4 +157,27 @@ test("cmux creates one named workspace and one native split per remaining member
   assert.equal(result.workspace, "workspace:2");
   assert.equal(calls.filter(([, args]) => args.includes("new-split")).length, 2);
   assert.deepEqual(calls.filter(([, args]) => args[0] === "send-key").map(([, args]) => args.at(-1)), ["enter", "enter"]);
+});
+
+test("cmux reports restricted socket access instead of a readiness timeout", async () => {
+  const denied = Object.assign(new Error("cmux command failed"), {
+    stderr: "Access denied - only processes started inside cmux can connect"
+  });
+  const adapter = createCmuxTerminal({
+    cmux: process.execPath,
+    async accessFile() {},
+    async delay() {},
+    async execFile(file) {
+      if (file === "/usr/bin/open") return { stdout: "" };
+      throw denied;
+    }
+  });
+  await assert.rejects(
+    adapter.open({
+      id: "team-1",
+      title: "CodexAgentTeam · Product",
+      panes: [{ title: "A", cwd: "/tmp/a", command: "codex resume a" }]
+    }),
+    /CMUX_SOCKET_MODE=allowAll/
+  );
 });

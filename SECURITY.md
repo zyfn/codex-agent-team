@@ -21,6 +21,7 @@ Include the Codex Desktop version, macOS version, reproduction steps, and whethe
 - Do not place credentials in remote Git URLs. Git authentication remains the user's responsibility and may be surfaced by Git itself.
 - Avatar input is size- and signature-checked, copied under the CodexAgentTeam data root, and never rendered from an arbitrary external path.
 - Member work uses Codex's native approval behavior. CodexAgentTeam does not auto-approve tools or file access.
+- Optional cmux control from the Dashboard requires cmux's `allowAll` socket mode because the Team Runtime is not a cmux child process. That mode allows other processes running as the same macOS user to reach cmux; Ghostty does not require this setting.
 
 Loopback ports reduce accidental network exposure; they are not an authentication boundary against another process running as the same macOS user. Do not run untrusted local software while CodexAgentTeam is active.
 

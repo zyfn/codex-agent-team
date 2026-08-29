@@ -75,12 +75,13 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
   const language = () => /^zh(?:-|$)/i.test(clientLocale()) ? "zh" : "en";
   const messages = {
     en: {
-      teams: "Teams", manage: "Manage", panelLabel: "CodexAgentTeam management",
+      teams: "Teams", manage: "Manage", panelLabel: "AgentTeam management",
       connected: "Connected", disconnected: "Disconnected", teamCountOne: "{count} team", teamCount: "{count} teams",
       running: "Running", waiting: "Needs attention", idle: "Idle", offline: "Offline", error: "Error",
       newTeam: "New Team", back: "Back",
       expandAll: "Expand All", collapseAll: "Collapse All", addMember: "Add Member",
       openCli: "Open CLI", openGhostty: "Open in Ghostty", openCmux: "Open in cmux",
+      ghosttyUnavailable: "Ghostty is not installed", cmuxUnavailable: "cmux is not installed",
       editTeam: "Edit Team", removeTeam: "Remove Team", noRole: "No role set",
       edit: "Edit", removeMember: "Remove Member", noMembers: "No members yet",
       noTeams: "No teams yet", noTeamsDescription: "Create a team, then add members with their own native Codex conversations.",
@@ -107,12 +108,13 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       avatarUnsupported: "Choose a PNG, JPEG, WebP, or GIF image"
     },
     zh: {
-      teams: "团队", manage: "管理", panelLabel: "CodexAgentTeam 管理",
+      teams: "团队", manage: "管理", panelLabel: "AgentTeam 管理",
       connected: "已连接", disconnected: "未连接", teamCountOne: "{count} 个团队", teamCount: "{count} 个团队",
       running: "运行中", waiting: "等待操作", idle: "空闲", offline: "离线", error: "异常",
       newTeam: "创建团队", back: "返回",
       expandAll: "全部展开", collapseAll: "全部收起", addMember: "添加成员",
       openCli: "打开 CLI", openGhostty: "在 Ghostty 中打开", openCmux: "在 cmux 中打开",
+      ghosttyUnavailable: "未安装 Ghostty", cmuxUnavailable: "未安装 cmux",
       editTeam: "编辑团队", removeTeam: "移除团队", noRole: "未设置职责",
       edit: "编辑", removeMember: "移除成员", noMembers: "暂无成员",
       noTeams: "还没有团队", noTeamsDescription: "创建团队后，再添加拥有独立原生会话的成员。",
@@ -195,6 +197,9 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
     return ring;
   };
   const chevronSvg = (className) => `<svg width="20" height="21" class="${className}" viewBox="0 0 20 21" fill="none" aria-hidden="true"><path d="M15.2793 7.71101C15.539 7.45131 15.961 7.45131 16.2207 7.71101C16.4804 7.97071 16.4804 8.39272 16.2207 8.65242L10.4707 14.4024C10.211 14.6621 9.78902 14.6621 9.52932 14.4024L3.77932 8.65242L3.69436 8.54792C3.52385 8.28979 3.55205 7.93828 3.77932 7.71101C4.00659 7.48374 4.3581 7.45554 4.61623 7.62605L4.72073 7.71101L10 12.9903L15.2793 7.71101Z" fill="currentColor" stroke="currentColor" stroke-width="0.6"/></svg>`;
+  const terminalLogo = (terminal) => terminal === "ghostty"
+    ? '<svg class="cat-terminal-logo ghostty" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="2" width="13" height="12" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="m4.5 6 2 2-2 2M8 10h3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg class="cat-terminal-logo cmux" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h.01M11 11h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
   function ensureStyles() {
     const existing = document.querySelector("#codex-agent-team-styles");
@@ -285,12 +290,12 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       const label = [...root.querySelectorAll("span,div,p")]
         .find((node) => !node.children.length && labels.includes(node.textContent?.trim()))
         ?? root.querySelector(".text-fade-truncate");
-      if (label) label.textContent = "CodexAgentTeam";
+      if (label) label.textContent = "AgentTeam";
       const iconSlot = button.querySelector("svg")?.parentElement;
       if (iconSlot) {
         iconSlot.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="icon-xs" aria-hidden="true"><path d="M5.75 7.25A2.25 2.25 0 1 0 5.75 2.75a2.25 2.25 0 0 0 0 4.5ZM10.75 6.75a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5ZM1.75 13.25v-.5a3.75 3.75 0 0 1 7.5 0v.5M9 9.25a3.25 3.25 0 0 1 5.25 2.56v1.44" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       }
-      button.setAttribute("aria-label", "CodexAgentTeam");
+      button.setAttribute("aria-label", "AgentTeam");
       button.onclick = (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -334,7 +339,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
     const brand = document.createElement("div");
     brand.className = "cat-brand";
     const brandTitle = document.createElement("h1");
-    brandTitle.textContent = "CodexAgentTeam";
+    brandTitle.textContent = "AgentTeam";
     const brandMeta = document.createElement("div");
     brandMeta.className = "cat-brand-meta";
     const teamCount = document.createElement("span");
@@ -439,17 +444,26 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       const terminalLabel = document.createElement("span");
       terminalLabel.className = "cat-terminal-label";
       terminalLabel.textContent = t("openCli");
-      terminalActions.append(terminalLabel);
+      const terminalOptions = document.createElement("span");
+      terminalOptions.className = "cat-terminal-options";
+      terminalActions.append(terminalLabel, terminalOptions);
       for (const [terminal, label] of [["ghostty", "openGhostty"], ["cmux", "openCmux"]]) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "cat-terminal-action";
-        button.textContent = terminal === "ghostty" ? "Ghostty" : "cmux";
-        button.title = t(label);
-        button.setAttribute("aria-label", t(label));
-        button.disabled = team.members.length === 0;
+        const logo = document.createElement("span");
+        logo.className = "cat-terminal-logo-wrap";
+        logo.innerHTML = terminalLogo(terminal);
+        const name = document.createElement("span");
+        name.textContent = terminal === "ghostty" ? "Ghostty" : "cmux";
+        button.append(logo, name);
+        const installed = state.snapshot.terminalAvailability?.[terminal] === true;
+        const accessibleLabel = installed ? t(label) : t(`${terminal}Unavailable`);
+        button.title = accessibleLabel;
+        button.setAttribute("aria-label", accessibleLabel);
+        button.disabled = team.members.length === 0 || !installed;
         button.onclick = () => send({ type: "openTeamTerminal", teamId: team.teamId, terminal });
-        terminalActions.append(button);
+        terminalOptions.append(button);
       }
       memberActions.append(terminalActions);
       for (const [text, handler] of [[t("addMember"), () => showMemberForm(team)], [t("editTeam"), () => showTeamForm(team)], [t("removeTeam"), () => showConfirmation({ title: t("removeTeamTitle", { name: team.name }), description: t("removeTeamDescription"), confirmText: t("removeTeam"), action: { type: "removeTeam", teamId: team.teamId } })]]) {
