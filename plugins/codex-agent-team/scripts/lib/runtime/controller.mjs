@@ -6,7 +6,7 @@ import {
   probeAppServerCapabilities,
 } from "./app-server.mjs";
 import { prepareRuntimeBundle } from "./bundle.mjs";
-import { readRuntimeState, runtimeIsLive } from "./state.mjs";
+import { readRuntimeState, runtimeIsLive, runtimeProcessMatches } from "./state.mjs";
 
 export { prepareRuntimeBundle } from "./bundle.mjs";
 
@@ -25,6 +25,9 @@ export function createRuntimeController({
   startRuntime = spawnRuntimeProcess,
   waitForStart = waitForRuntimeStart,
   signalRuntime = (pid) => process.kill(pid, "SIGTERM"),
+  matchesRuntime = (runtime) => runtimeProcessMatches(runtime, {
+    runtimeScript: paths.runtimeScript,
+  }),
   acquireLease = acquireFileLease,
   acquireRuntimeLease = acquireFileLease,
 }) {
@@ -48,6 +51,7 @@ export function createRuntimeController({
   controller.startRuntime = startRuntime;
   controller.waitForStart = waitForStart;
   controller.signalRuntime = signalRuntime;
+  controller.matchesRuntime = matchesRuntime;
   controller.acquireLease = acquireLease;
   controller.acquireRuntimeLease = acquireRuntimeLease;
   controller.launch = function launch() {
@@ -105,7 +109,7 @@ export function createRuntimeController({
         error: runtime.error || "CodexAgentTeam failed to launch",
       };
     }
-    if (!runtimeIsLive(runtime))
+    if (!runtimeIsLive(runtime) || !(await controller.matchesRuntime(runtime)))
       return {
         state: "off",
         staleRuntime: true,

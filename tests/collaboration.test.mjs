@@ -54,16 +54,16 @@ test("member communication resolves source from a path inside the Member Directo
   }).sourceName, "前端");
 });
 
-test("unloaded member identity resolves from its deterministic Team-owned directory", () => {
+test("unloaded member identity is never guessed from its display name", () => {
   const unloaded = structuredClone(snapshot);
   unloaded.teams[0].teamDirectory = "/tmp/team";
   for (const member of unloaded.teams[0].members) delete member.cwd;
 
-  assert.equal(resolveMessageRoute(unloaded, {
+  assert.throws(() => resolveMessageRoute(unloaded, {
     target: "后端",
     cwd: "/tmp/team/members/前端/src",
     sourceThreadId: "unavailable-runtime-thread-id",
-  }).sourceName, "前端");
+  }), /not a CodexAgentTeam member/);
 });
 
 test("ordinary Codex conversation cannot impersonate a Team member", () => {

@@ -14,4 +14,6 @@
 - Use the shorter **AgentTeam** label for the in-app projection, detect installed terminal applications once per Runtime, show their native macOS icons, and open them from one Team-header menu through native AppleScript automation.
 - Keep member initialization and successful message confirmations concise without exposing internal routing terminology.
 - Clarify member creation with one working-files choice at a time and a labeled destination preview.
-- Resolve unloaded member identity from the deterministic Team-owned Member Directory and lazily resume only the message target.
+- Resolve member identity only from native Thread identity or native cwd, and lazily resume only the message target.
+- Validate the Runtime process command before trusting or signaling a persisted PID.
+- Coalesce App Server event bursts into serialized Dashboard refreshes.

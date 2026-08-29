@@ -75,7 +75,11 @@ test("a live Runtime lock blocks destructive cleanup when runtime state is missi
 test("status has only off, opening, active, and failed states", async () => {
   const paths = sessionPaths(await temporaryRoot("status"));
   await mkdir(paths.runRoot, { recursive: true });
-  const controller = createRuntimeController({ paths, acquireLease: leaseStub() });
+  const controller = createRuntimeController({
+    paths,
+    acquireLease: leaseStub(),
+    matchesRuntime: async () => true
+  });
 
   assert.deepEqual(await controller.status(), { state: "off" });
   await writeFile(paths.runtimeState, JSON.stringify({
@@ -113,7 +117,8 @@ test("launch reports an existing live Runtime without reopening another Desktop"
   const controller = createRuntimeController({
     paths,
     startRuntime: () => { started = true; return { pid: 999 }; },
-    acquireLease: leaseStub()
+    acquireLease: leaseStub(),
+    matchesRuntime: async () => true
   });
 
   assert.deepEqual(await controller.launch(), { status: "already_active", pid: process.pid });
@@ -128,11 +133,29 @@ test("shutdown signals only the validated live CodexAgentTeam Runtime", async ()
   const controller = createRuntimeController({
     paths,
     acquireLease: leaseStub(),
+    matchesRuntime: async () => true,
     signalRuntime: (pid) => signals.push(pid)
   });
 
   assert.deepEqual(await controller.shutdown(), { status: "accepted" });
   assert.deepEqual(signals, [process.pid]);
+});
+
+test("a reused PID is rejected when it is not the CodexAgentTeam Runtime process", async () => {
+  const paths = sessionPaths(await temporaryRoot("reused-pid"));
+  await mkdir(paths.runRoot, { recursive: true });
+  await writeFile(paths.runtimeState, JSON.stringify({ state: "active", pid: process.pid }));
+  const signals = [];
+  const controller = createRuntimeController({
+    paths,
+    acquireLease: leaseStub(),
+    matchesRuntime: async () => false,
+    signalRuntime: (pid) => signals.push(pid)
+  });
+
+  assert.deepEqual(await controller.status(), { state: "off", staleRuntime: true });
+  assert.deepEqual(await controller.shutdown(), { status: "already_inactive" });
+  assert.deepEqual(signals, []);
 });
 
 test("shutting down an inactive run cleans only disposable CodexAgentTeam runtime bundles", async () => {

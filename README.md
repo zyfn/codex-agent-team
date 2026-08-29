@@ -17,7 +17,7 @@ Create specialists once. See the whole team, enter any original conversation, an
 
 One Codex conversation is easy to manage. A group of specialists is not: roles get repeated, context spreads across tabs, working directories collide, and checking every conversation becomes its own job.
 
-CodexAgentTeam organizes native Codex conversations into durable teams. Each member keeps an identity, responsibility, avatar, independent directory, and original Thread. A global Dashboard shows the team and opens the real conversation when judgment is needed.
+CodexAgentTeam organizes native Codex conversations into durable teams. Each member keeps one original Thread, a user-defined responsibility, an avatar, and a working directory owned by that Thread. A global Dashboard shows the team and opens the real conversation when judgment is needed.
 
 > [!IMPORTANT]
 > CodexAgentTeam is an experimental macOS preview. Native Threads and App Server events remain authoritative; the global Desktop entry currently depends on a small, fail-closed CDP adapter.
@@ -89,12 +89,42 @@ Open Product and provide the goal
 
 The roles are examples, not a built-in workflow. The same model works for research, content, operations, or any work that benefits from long-lived specialists.
 
+## How it works
+
+```mermaid
+flowchart LR
+  Skill[Launch Skill] --> Controller[Runtime Controller]
+
+  subgraph Run[One explicit CodexAgentTeam run]
+    Controller --> Runtime[Runtime]
+    Runtime --> Guard[Process Guard]
+    Guard --> Server[Official Codex App Server]
+    Runtime --> Desktop[Separate Codex Desktop]
+    Runtime --> Bridge[CDP Bridge]
+    Bridge --> Desktop
+    Bridge --> Manager[Team Manager]
+    Manager --> Server
+    Desktop <-->|loopback WebSocket| Server
+  end
+
+  Server --> Native[Native Projects · Threads · Turns]
+  Bridge --> Dashboard[AgentTeam Dashboard]
+```
+
+1. **Preflight first.** The launch command checks the installed Codex CLI, Desktop, loopback WebSocket transport, native Project methods, and the Desktop integration anchor before starting a run.
+2. **One run owns one process tree.** A detached Runtime starts one guarded official App Server on a dynamic loopback port and one Codex Desktop with an isolated Electron profile. It never borrows or stops the user's shared daemon.
+3. **Codex remains authoritative.** The Team Manager uses native Project and Thread methods. The Dashboard is updated from App Server events and never stores a second copy of conversation state.
+4. **The Desktop layer is presentation only.** CDP adds the global AgentTeam entry, hosts the Dashboard, and invokes Codex's native navigation. If the required Desktop capability changes, launch fails closed without changing Codex data.
+5. **Closing is ownership-driven.** When the separate Codex Desktop exits, the Runtime disconnects the bridge, stops only its guarded App Server, releases locks, and exits. Team registration, working files, and native Threads remain.
+
+Member display names are native Thread names, not filesystem or routing identities. Collaboration identifies the sender by its native `threadId`, or by the native Thread `cwd` when that metadata is available. It never guesses identity from a member name or a constructed path. The target is resolved only inside the same Team, then the message is submitted as one native Turn; an active target Turn is steered instead of creating an automatic reply chain.
+
 ## The model
 
 ![CodexAgentTeam adds a thin organization layer over native Codex Projects and Threads](./docs/assets/native-team-model.svg)
 
 - **One Team** is backed by one native Codex Project; `teamId` is that native identifier.
-- **One member** maps to one persistent native Thread and one Team-owned Member Directory. That directory is empty, a local Git worktree, or a remote Git clone.
+- **One member** maps to one persistent native Thread. At creation time, AgentTeam prepares an empty directory, a local Git worktree, or a remote Git clone, then Codex owns the Thread cwd.
 - **Team collaboration** routes a message directly to the selected member's native Thread.
 - **One Dashboard** projects Codex state; it does not create a second source of truth.
 
@@ -122,7 +152,7 @@ Terminal availability is detected once when the Runtime starts; applications tha
 
 ## Safety and compatibility
 
-- Without a Git source, CodexAgentTeam creates an empty Member Directory named after the member under the Team Directory.
+- Without a Git source, CodexAgentTeam creates an empty working directory under the Team Directory.
 - A selected local source must be a Git repository; CodexAgentTeam creates an isolated worktree in the Member Directory and never works directly in the source checkout.
 - A remote Git URL is cloned into the Member Directory.
 - Model and reasoning choices are used only when the native Thread is created. Codex owns subsequent changes together with the Thread cwd.

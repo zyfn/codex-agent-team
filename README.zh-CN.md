@@ -17,7 +17,7 @@
 
 管理一段 Codex 会话很容易，管理一组专家却不容易：职责需要反复说明，上下文散落在多个标签页里，工作目录可能互相影响，逐个检查会话本身也变成了一项工作。
 
-CodexAgentTeam 把原生 Codex 会话组织成长期存在的团队。每位成员保留自己的身份、职责、头像、独立目录和原始 Thread；全局 Dashboard 展示整支团队，并在需要判断时进入真正的会话。
+CodexAgentTeam 把原生 Codex 会话组织成长期存在的团队。每位成员保留一条原始 Thread、用户定义的职责、头像，以及由该 Thread 持有的工作目录；全局 Dashboard 展示整支团队，并在需要判断时进入真正的会话。
 
 > [!IMPORTANT]
 > CodexAgentTeam 当前是 macOS 实验预览版。原生 Thread 与 App Server 事件始终是权威事实；全局 Desktop 入口目前依赖一层很小的、失败关闭的 CDP 适配器。
@@ -89,12 +89,42 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 
 这些角色只是示例，不是内置工作流。同一模型也适合调研、内容、运营，以及任何需要长期专家协作的工作。
 
+## 工作原理
+
+```mermaid
+flowchart LR
+  Skill[Launch Skill] --> Controller[Runtime Controller]
+
+  subgraph Run[一次显式启动的 CodexAgentTeam]
+    Controller --> Runtime[Runtime]
+    Runtime --> Guard[Process Guard]
+    Guard --> Server[官方 Codex App Server]
+    Runtime --> Desktop[独立 Codex Desktop]
+    Runtime --> Bridge[CDP Bridge]
+    Bridge --> Desktop
+    Bridge --> Manager[Team Manager]
+    Manager --> Server
+    Desktop <-->|本机 WebSocket| Server
+  end
+
+  Server --> Native[原生 Project · Thread · Turn]
+  Bridge --> Dashboard[AgentTeam Dashboard]
+```
+
+1. **先完成预检。** 启动命令先验证 Codex CLI、Desktop、本机 WebSocket、原生 Project 方法和 Desktop 注入锚点；全部通过后才启动本次运行。
+2. **一次运行只拥有一棵进程树。** 独立 Runtime 在动态本机端口启动一个受守护的官方 App Server，再启动一个使用隔离 Electron Profile 的 Codex Desktop；它不借用、也不停止用户已有的共享 daemon。
+3. **Codex 始终是事实来源。** Team Manager 只调用原生 Project 与 Thread 方法；Dashboard 根据 App Server 事件刷新，不复制会话状态。
+4. **Desktop 层只负责呈现。** CDP 增加全局 AgentTeam 入口、承载 Dashboard，并调用 Codex 原生导航。所需 Desktop 能力发生变化时，启动会失败关闭，不修改 Codex 数据。
+5. **关闭由所有权自然传递。** 独立 Codex Desktop 退出后，Runtime 断开 Bridge，只停止自己守护的 App Server，释放锁并退出；Team 注册、工作文件和原生 Thread 继续保留。
+
+成员名称只是原生 Thread 的显示名称，不是文件系统或消息路由身份。协作优先使用原生 `threadId` 识别发送者；只有 Codex 已返回该 Thread 的原生 `cwd` 时，才允许用 cwd 定位。系统不会根据成员名称或拼接出的目录猜测身份。目标只能从同一 Team 中解析，消息随后作为一个原生 Turn 提交；目标已有运行中 Turn 时使用 steer，不产生自动回复链。
+
 ## 产品模型
 
 ![CodexAgentTeam 在原生 Codex Project 与 Thread 之上增加轻量组织层](./docs/assets/native-team-model.svg)
 
 - **一个 Team** 由一个原生 Codex Project 承载；`teamId` 就是该原生标识。
-- **一位成员** 对应一条持久原生 Thread 和一个 Team 管理的成员目录；该目录可以是空目录、本地 Git worktree 或远程 Git clone。
+- **一位成员** 对应一条持久原生 Thread。创建时 AgentTeam 准备空目录、本地 Git worktree 或远程 Git clone，随后 Thread cwd 由 Codex 管理。
 - **Team 协作** 会把消息直接发送到所选成员的原生 Thread。
 - **一个 Dashboard** 投影 Codex 状态，不创造第二份事实来源。
 
@@ -122,7 +152,7 @@ Runtime 启动时只检测一次终端安装情况；未安装的应用会置灰
 
 ## 安全与兼容性
 
-- 未选择 Git 来源时，在 Team 目录内创建一个以成员名称命名的空成员目录。
+- 未选择 Git 来源时，在 Team 目录内创建一个空工作目录。
 - 选择本地来源时必须是 Git 仓库；CodexAgentTeam 在成员目录中创建隔离 worktree，绝不直接使用源 checkout。
 - 输入远程 Git 地址时，将仓库克隆到成员目录。
 - 模型与推理配置只用于创建原生 Thread；后续变更与 Thread cwd 均由 Codex 管理。

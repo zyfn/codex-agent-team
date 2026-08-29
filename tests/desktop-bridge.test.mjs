@@ -378,6 +378,50 @@ test("dashboard refresh bootstraps once and only pushes new snapshot data", asyn
   assert.ok(expressions.slice(1).every((expression) => !expression.includes("data:image/jpeg;base64,avatar")));
 });
 
+test("App Server event bursts never run concurrent Dashboard snapshots", async () => {
+  let notification;
+  let activeSnapshots = 0;
+  let maximumActiveSnapshots = 0;
+  let releaseFirstEventSnapshot;
+  let snapshotCount = 0;
+  const firstEventSnapshot = new Promise((resolve) => { releaseFirstEventSnapshot = resolve; });
+  const cdp = {
+    async request(method) {
+      if (method === "Page.addScriptToEvaluateOnNewDocument") return { identifier: "team-bootstrap" };
+      return {};
+    },
+    onEvent() { return () => {}; },
+    async evaluate() {}
+  };
+  const manager = {
+    async snapshot() {
+      snapshotCount += 1;
+      activeSnapshots += 1;
+      maximumActiveSnapshots = Math.max(maximumActiveSnapshots, activeSnapshots);
+      if (snapshotCount === 3) await firstEventSnapshot;
+      activeSnapshots -= 1;
+      return { teams: [] };
+    },
+    async ownsNotification() { return true; }
+  };
+  const rpc = {
+    onNotification(listener) { notification = listener; return () => {}; }
+  };
+  const host = createDesktopBridge({ manager, cdp, rpc, refreshDebounceMs: 0 });
+  await host.attach();
+
+  notification("turn/started", { threadId: "member-1" });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  notification("item/started", { threadId: "member-1" });
+  notification("item/completed", { threadId: "member-1" });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  releaseFirstEventSnapshot();
+  await host.whenIdle();
+
+  assert.equal(maximumActiveSnapshots, 1);
+  assert.equal(snapshotCount, 4);
+});
+
 test("dashboard management actions route through the Manager command interface", async () => {
   const events = [];
   const calls = [];

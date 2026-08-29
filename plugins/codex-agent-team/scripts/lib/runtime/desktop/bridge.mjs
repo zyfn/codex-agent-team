@@ -33,6 +33,7 @@ export function createDesktopBridge({
   rendererPollMs = 100,
   sidebarReadyTimeoutMs = 15_000,
   sidebarPollMs = 50,
+  refreshDebounceMs = 100,
   actionTimeoutMs = 10 * 60_000,
   delay: wait = delay
 }) {
@@ -46,7 +47,10 @@ export function createDesktopBridge({
   let connected = false;
   let closing = false;
   let actions = Promise.resolve();
+  let refreshes = Promise.resolve();
   let refreshTimer = null;
+  let eventRefreshPending = false;
+  let eventRefreshRunning = null;
   let bootstrapScriptId = null;
   let disposeNotifications = null;
   let disposeCdpEvents = null;
@@ -58,7 +62,7 @@ export function createDesktopBridge({
     close,
     refresh,
     snapshot,
-    whenIdle: () => actions
+    whenIdle
   };
 
   async function attach() {
@@ -176,7 +180,11 @@ export function createDesktopBridge({
   async function close() {
     closing = true;
     clearTimeout(refreshTimer);
+    refreshTimer = null;
+    eventRefreshPending = false;
     await actions.catch(() => undefined);
+    await eventRefreshRunning?.catch(() => undefined);
+    await refreshes.catch(() => undefined);
     disposeNotifications?.();
     disposeNotifications = null;
     disposeCdpEvents?.();
@@ -201,7 +209,13 @@ export function createDesktopBridge({
     closing = false;
   }
 
-  async function refresh(error, completeAction = false) {
+  function refresh(error, completeAction = false) {
+    const current = refreshes.then(() => refreshNow(error, completeAction));
+    refreshes = current.catch(() => undefined);
+    return current;
+  }
+
+  async function refreshNow(error, completeAction = false) {
     if (!manager || !cdp) throw new Error("Codex Desktop is not connected");
     if (!bootstrapScriptId) return bootstrap(error);
     const value = await buildSnapshot(error, false);
@@ -214,8 +228,32 @@ export function createDesktopBridge({
   }
 
   function scheduleRefresh() {
+    eventRefreshPending = true;
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh().catch(() => undefined), 100);
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      if (!eventRefreshRunning) {
+        eventRefreshRunning = drainEventRefreshes().finally(() => {
+          eventRefreshRunning = null;
+        });
+      }
+    }, refreshDebounceMs);
+  }
+
+  async function drainEventRefreshes() {
+    while (eventRefreshPending && !closing) {
+      eventRefreshPending = false;
+      await refresh().catch(() => undefined);
+    }
+  }
+
+  async function whenIdle() {
+    await actions;
+    if (refreshTimer) {
+      await new Promise((resolve) => setTimeout(resolve, refreshDebounceMs + 1));
+    }
+    await eventRefreshRunning;
+    await refreshes;
   }
 
   async function refreshOwned(params) {

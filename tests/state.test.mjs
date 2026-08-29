@@ -4,7 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { requireActiveRuntime } from "../plugins/codex-agent-team/scripts/lib/runtime/state.mjs";
+import {
+  requireActiveRuntime,
+  runtimeProcessMatches,
+} from "../plugins/codex-agent-team/scripts/lib/runtime/state.mjs";
 
 test("runtime consumers reject an active-looking record whose process is dead", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-runtime-state-"));
@@ -18,4 +21,17 @@ test("runtime consumers reject an active-looking record whose process is dead", 
     requireActiveRuntime(file),
     /CodexAgentTeam is not running/
   );
+});
+
+test("Runtime process identity requires the expected bundled script path", async () => {
+  const runtime = { state: "active", pid: process.pid };
+
+  assert.equal(await runtimeProcessMatches(runtime, {
+    runtimeScript: "/tmp/agent-team/runtime/run.mjs",
+    readProcessCommand: async () => "node /tmp/agent-team/runtime/run.mjs",
+  }), true);
+  assert.equal(await runtimeProcessMatches(runtime, {
+    runtimeScript: "/tmp/agent-team/runtime/run.mjs",
+    readProcessCommand: async () => "node /tmp/unrelated-worker.mjs",
+  }), false);
 });

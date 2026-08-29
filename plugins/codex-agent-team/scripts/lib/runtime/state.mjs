@@ -1,4 +1,9 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 export async function readRuntimeState(file) {
   try {
@@ -11,6 +16,19 @@ export async function readRuntimeState(file) {
 
 export function runtimeIsLive(runtime, isProcessAlive = processAlive) {
   return Number.isInteger(runtime?.pid) && runtime.pid > 0 && isProcessAlive(runtime.pid);
+}
+
+export async function runtimeProcessMatches(runtime, {
+  runtimeScript,
+  readProcessCommand = processCommand,
+} = {}) {
+  if (!runtimeIsLive(runtime) || !runtimeScript) return false;
+  try {
+    const command = await readProcessCommand(runtime.pid);
+    return String(command).includes(path.resolve(runtimeScript));
+  } catch {
+    return false;
+  }
 }
 
 export async function requireActiveRuntime(file, {
@@ -33,4 +51,11 @@ function processAlive(pid) {
   } catch (error) {
     return error?.code === "EPERM";
   }
+}
+
+async function processCommand(pid) {
+  const { stdout } = await execFileAsync("/bin/ps", [
+    "-p", String(pid), "-o", "command=",
+  ], { encoding: "utf8", timeout: 2_000, maxBuffer: 64 * 1024 });
+  return stdout.trim();
 }

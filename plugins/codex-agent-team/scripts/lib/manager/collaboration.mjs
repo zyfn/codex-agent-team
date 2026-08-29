@@ -32,7 +32,7 @@ export function resolveMemberContext(snapshot, { cwd, sourceThreadId }) {
     threadId: member.threadId,
     name: member.name,
     role: String(member.role ?? "").trim(),
-    cwd: memberDirectory(team, member),
+    cwd: nativeMemberDirectory(member),
   });
   return {
     team: {
@@ -58,7 +58,7 @@ function resolveSourceMember(snapshot, { cwd, sourceThreadId }) {
     (team.members ?? []).map((member) => ({
       team,
       member,
-      cwd: memberDirectory(team, member),
+      cwd: nativeMemberDirectory(member),
     }))
   );
   let source = sourceThreadId
@@ -78,10 +78,9 @@ function resolveSourceMember(snapshot, { cwd, sourceThreadId }) {
   return source;
 }
 
-function memberDirectory(team, member) {
+function nativeMemberDirectory(member) {
   if (typeof member?.cwd === "string" && member.cwd.trim()) return member.cwd;
-  if (!team?.teamDirectory || !member?.name) return null;
-  return path.join(team.teamDirectory, "members", member.name);
+  return null;
 }
 
 function requiredText(value, label) {
