@@ -715,24 +715,43 @@ export async function connectActiveAppServer({
   runtimeState,
   clientName = "codex-agent-team-command",
   createConnection = (options) => new AppServerClient(options),
+  attempts = 3,
+  retryDelayMs = 100,
+  wait = delay,
 }) {
   const runtime = await requireActiveRuntime(runtimeState);
   if (!runtime.appServerUrl)
     throw new Error("CodexAgentTeam App Server endpoint is unavailable");
-  const rpc = createConnection({
-    webSocketUrl: runtime.appServerUrl,
-    clientName,
-  });
-  try {
-    await rpc.connect();
-    await rpc.request("config/read", {}, 10_000);
-  } catch (error) {
-    await rpc.close?.().catch(() => undefined);
-    throw error;
+  const totalAttempts = Math.max(1, Number(attempts) || 1);
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    const rpc = createConnection({
+      webSocketUrl: runtime.appServerUrl,
+      clientName,
+    });
+    try {
+      await rpc.connect();
+    } catch (error) {
+      await rpc.close?.().catch(() => undefined);
+      if (attempt >= totalAttempts || !transientLoopbackHandshakeError(error)) throw error;
+      await wait(retryDelayMs * attempt);
+      continue;
+    }
+    try {
+      await rpc.request("config/read", {}, 10_000);
+      return { runtime, rpc };
+    } catch (error) {
+      await rpc.close?.().catch(() => undefined);
+      throw error;
+    }
   }
-  return { runtime, rpc };
+  throw new Error("CodexAgentTeam App Server connection failed");
 }
 
 export async function disconnectActiveAppServer(client) {
   await client?.rpc?.close?.();
+}
+
+function transientLoopbackHandshakeError(error) {
+  return /network error|non-101|SecItemCopyMatching|ECONN(?:REFUSED|RESET)|connection (?:closed|reset|refused)|WebSocket (?:failed|closed before opening)/i
+    .test(error instanceof Error ? error.message : String(error));
 }

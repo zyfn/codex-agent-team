@@ -19,3 +19,4 @@
 - Coalesce App Server event bursts into serialized Dashboard refreshes.
 - Use a compact full-width Team monitor with lazy member rendering while preserving independent and all-Team expansion.
 - Label model choices as initial settings and reject silent provider fallback for an explicitly selected model.
+- Retry bounded transient loopback WebSocket handshake failures before reporting Team collaboration unavailable.
