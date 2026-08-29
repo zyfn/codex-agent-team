@@ -71,24 +71,6 @@ Inside a member conversation, `$codex-agent-team:collaborate` can inspect the cu
 
 Each Team has a user-visible `shared` directory for durable documents. Members use normal file tools there and send the absolute file path only when another teammate needs the document.
 
-## A real workflow
-
-```text
-Create “Release”
-  ├─ Product  · clarifies the goal and acceptance
-  ├─ Backend  · owns service behavior
-  ├─ Frontend · owns the user flow
-  └─ QA       · verifies the result
-
-Open Product and provide the goal
-  → Product explicitly contacts Backend and Frontend
-  → Dashboard reflects native Codex running / waiting / idle state
-  → Enter any member's original conversation when a decision is needed
-  → Ask QA to verify the delivered result in its own persistent Thread
-```
-
-The roles are examples, not a built-in workflow. The same model works for research, content, operations, or any work that benefits from long-lived specialists.
-
 ## How it works
 
 ```mermaid
@@ -111,77 +93,31 @@ flowchart LR
   Bridge --> Dashboard[AgentTeam Dashboard]
 ```
 
-1. **Preflight first.** The launch command checks the installed Codex CLI, Desktop, loopback WebSocket transport, native Project methods, and the Desktop integration anchor before starting a run.
-2. **One run owns one process tree.** A detached Runtime starts one guarded official App Server on a dynamic loopback port and one Codex Desktop with an isolated Electron profile. It never borrows or stops the user's shared daemon.
-3. **Codex remains authoritative.** The Team Manager uses native Project and Thread methods. The Dashboard is updated from App Server events and never stores a second copy of conversation state.
-4. **The Desktop layer is presentation only.** CDP adds the global AgentTeam entry, hosts the Dashboard, and invokes Codex's native navigation. If the required Desktop capability changes, launch fails closed without changing Codex data.
-5. **Closing is ownership-driven.** When the separate Codex Desktop exits, the Runtime disconnects the bridge, stops only its guarded App Server, releases locks, and exits. Team registration, working files, and native Threads remain.
+1. Launch verifies the installed Codex CLI, Desktop, App Server transport, native Project methods, and Desktop integration anchor.
+2. One Runtime starts one guarded official App Server and one separate Codex Desktop on dynamic loopback ports.
+3. The Team Manager uses native Projects, Threads, and Turns. App Server events update the Dashboard; no conversation state is copied.
+4. CDP adds the global AgentTeam entry and calls native navigation. If Codex changes a required private capability, the run fails closed.
+5. Closing the separate Desktop stops only that run. Team registration, working files, and native Threads remain.
 
-Member display names are native Thread names, not filesystem or routing identities. Collaboration identifies the sender by its native `threadId`, or by the native Thread `cwd` when that metadata is available. It never guesses identity from a member name or a constructed path. The target is resolved only inside the same Team, then the message is submitted as one native Turn; an active target Turn is steered instead of creating an automatic reply chain.
-
-## The model
-
-![CodexAgentTeam adds a thin organization layer over native Codex Projects and Threads](./docs/assets/native-team-model.svg)
-
-- **One Team** is backed by one native Codex Project; `teamId` is that native identifier.
-- **One member** maps to one persistent native Thread. At creation time, AgentTeam prepares an empty directory, a local Git worktree, or a remote Git clone, then Codex owns the Thread cwd.
-- **Team collaboration** routes a message directly to the selected member's native Thread.
-- **One Dashboard** projects Codex state; it does not create a second source of truth.
-
-There is no Task database, Leader lifecycle, copied conversation history, custom App Server, or second chat UI.
-
-Codex owns the backing Project identity and display name. CodexAgentTeam stores only `teamId`, one stable Team Directory, and minimal member identity metadata. Opening the Dashboard reads the current Team name, member cwd, and runtime state from Codex; it does not persist duplicate native state.
-
-## Native by design
-
-| CodexAgentTeam owns | Codex owns |
-| --- | --- |
-| Team registration and member metadata | Team identity, name, appearance, and roots |
-| Responsibilities and avatars | Thread history and storage |
-| Team and Member Directory preparation | Turns, tools, and approvals |
-| Explicit teammate routing | Models and reasoning behavior |
-| Dashboard projection | Runtime state, conversation rendering, and navigation |
-
-CodexAgentTeam does not modify Codex SQLite, rollout files, `config.toml`, authentication, or Thread data formats. Removing a member archives its native conversation and preserves every Member Directory and Git branch.
+One Team is one native Codex Project; one member is one persistent native Thread. Member names are Thread display names, never routing or filesystem identities. Collaboration identifies the sender from native Thread metadata, resolves a target only inside the same Team, and submits one native Turn. There is no Task database, copied history, custom App Server, or second chat UI.
 
 ## Optional terminal view
 
-From each Team header in the Dashboard, choose **Ghostty** or **cmux** from the terminal menu. CodexAgentTeam resumes the same native member Threads in one tab or workspace with split panes and member titles. This is another view over the Team, not another session model.
-
-Terminal availability is detected once when the Runtime starts; applications that are not installed are shown disabled, and installed applications use their native macOS icons. Ghostty and cmux are opened through their native AppleScript automation APIs, so CodexAgentTeam does not require cmux control-socket access or a global `allowAll` setting.
+Choose **Ghostty** or **cmux** from a Team header to resume the same member Threads in one native split layout. Missing applications are disabled; no cmux control-socket setting is required.
 
 ## Safety and compatibility
 
-- Without a Git source, CodexAgentTeam creates an empty working directory under the Team Directory.
-- A selected local source must be a Git repository; CodexAgentTeam creates an isolated worktree in the Member Directory and never works directly in the source checkout.
-- A remote Git URL is cloned into the Member Directory.
-- Model and reasoning choices are used only when the native Thread is created. Codex owns subsequent changes together with the Thread cwd.
-- Removing a member archives its native Thread but never deletes its directory, worktree, branch, or avatar file.
-- Each run owns one temporary official Codex App Server and never touches the user's shared daemon.
-- The CodexAgentTeam Desktop uses an isolated Electron profile, so it can start without taking over the ordinary Codex window.
-- Closing the CodexAgentTeam Desktop ends its owned App Server; attached terminal views disconnect with that run.
-- Ports and connection waits are bounded; CodexAgentTeam does not install a startup job or intercept future Codex launches.
-- Desktop integration fails closed when a required private capability changes.
+- Local Git sources become isolated worktrees; remote Git sources are cloned; no source checkout is modified directly.
+- Codex owns Thread history, cwd, models, Turns, tools, and approvals. AgentTeam stores only Team registration and member metadata.
+- Removing a member archives its Thread and preserves working files. Removing the plugin also preserves native Threads and `~/.codex-agent-team/`.
+- AgentTeam never edits Codex SQLite, rollout files, `config.toml`, authentication, or Thread formats.
+- The global Desktop entry depends on private Codex capabilities and is therefore an experimental, fail-closed macOS integration.
 
 Read [SECURITY.md](./SECURITY.md) for the trust boundary, [SUPPORT.md](./SUPPORT.md) for the compatibility promise and issue checklist, and [ASSETS.md](./ASSETS.md) for media licensing.
 
-## Data and uninstall
-
-CodexAgentTeam stores Team registration, avatars, Member Directories, and bounded runtime diagnostics under `~/.codex-agent-team/`. Removing the plugin does not delete this directory or native Codex conversations. Quit an active CodexAgentTeam window with **Command-Q** before uninstalling, then remove retained data manually only when you no longer need it.
-
 ## Development
 
-`plugins/codex-agent-team/` is the only installable runtime source.
-
-```text
-plugins/codex-agent-team/
-├── .codex-plugin/   # manifest
-├── skills/          # Agent-facing launch and collaboration entry points
-├── scripts/         # Team management, App Server, Desktop, and terminal implementation
-└── assets/avatars/  # read-only built-in member avatars shipped with the plugin
-```
-
-Custom avatars and Team data are user data under `~/.codex-agent-team/`; they are never written back into the plugin bundle.
+`plugins/codex-agent-team/` is the only installable source. Team data and custom avatars live under `~/.codex-agent-team/`.
 
 ```sh
 npm test

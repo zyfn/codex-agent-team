@@ -71,24 +71,6 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 
 每个 Team 都有一个用户可见的 `shared` 目录，用于保存持久共享文档。成员直接使用原生文件工具读写；只有其他成员确实需要时，才发送文件绝对路径、用途和期望动作。
 
-## 一次真实协作
-
-```text
-创建“发布团队”
-  ├─ 产品 · 澄清目标与验收
-  ├─ 后端 · 负责服务行为
-  ├─ 前端 · 负责用户流程
-  └─ 测试 · 验证最终结果
-
-打开产品成员并给出目标
-  → 产品显式联系后端和前端
-  → Dashboard 反映 Codex 原生的运行 / 等待 / 空闲状态
-  → 需要判断时，进入任意成员的原始会话
-  → 让测试成员在自己的持久 Thread 中完成验收
-```
-
-这些角色只是示例，不是内置工作流。同一模型也适合调研、内容、运营，以及任何需要长期专家协作的工作。
-
 ## 工作原理
 
 ```mermaid
@@ -111,77 +93,31 @@ flowchart LR
   Bridge --> Dashboard[AgentTeam Dashboard]
 ```
 
-1. **先完成预检。** 启动命令先验证 Codex CLI、Desktop、本机 WebSocket、原生 Project 方法和 Desktop 注入锚点；全部通过后才启动本次运行。
-2. **一次运行只拥有一棵进程树。** 独立 Runtime 在动态本机端口启动一个受守护的官方 App Server，再启动一个使用隔离 Electron Profile 的 Codex Desktop；它不借用、也不停止用户已有的共享 daemon。
-3. **Codex 始终是事实来源。** Team Manager 只调用原生 Project 与 Thread 方法；Dashboard 根据 App Server 事件刷新，不复制会话状态。
-4. **Desktop 层只负责呈现。** CDP 增加全局 AgentTeam 入口、承载 Dashboard，并调用 Codex 原生导航。所需 Desktop 能力发生变化时，启动会失败关闭，不修改 Codex 数据。
-5. **关闭由所有权自然传递。** 独立 Codex Desktop 退出后，Runtime 断开 Bridge，只停止自己守护的 App Server，释放锁并退出；Team 注册、工作文件和原生 Thread 继续保留。
+1. 启动前验证 Codex CLI、Desktop、App Server 传输、原生 Project 方法和 Desktop 注入锚点。
+2. 一个 Runtime 在动态本机端口启动一个受守护的官方 App Server 和一个独立 Codex Desktop。
+3. Team Manager 只调用原生 Project、Thread 与 Turn；Dashboard 根据 App Server 事件更新，不复制会话状态。
+4. CDP 只增加全局 AgentTeam 入口并调用原生导航；Codex 私有能力变化时失败关闭。
+5. 独立 Desktop 退出后只结束本次运行；Team 注册、工作文件和原生 Thread 继续保留。
 
-成员名称只是原生 Thread 的显示名称，不是文件系统或消息路由身份。协作优先使用原生 `threadId` 识别发送者；只有 Codex 已返回该 Thread 的原生 `cwd` 时，才允许用 cwd 定位。系统不会根据成员名称或拼接出的目录猜测身份。目标只能从同一 Team 中解析，消息随后作为一个原生 Turn 提交；目标已有运行中 Turn 时使用 steer，不产生自动回复链。
-
-## 产品模型
-
-![CodexAgentTeam 在原生 Codex Project 与 Thread 之上增加轻量组织层](./docs/assets/native-team-model.svg)
-
-- **一个 Team** 由一个原生 Codex Project 承载；`teamId` 就是该原生标识。
-- **一位成员** 对应一条持久原生 Thread。创建时 AgentTeam 准备空目录、本地 Git worktree 或远程 Git clone，随后 Thread cwd 由 Codex 管理。
-- **Team 协作** 会把消息直接发送到所选成员的原生 Thread。
-- **一个 Dashboard** 投影 Codex 状态，不创造第二份事实来源。
-
-系统没有 Task 数据库、Leader 生命周期、聊天记录副本、自定义 App Server 或第二套聊天 UI。
-
-承载 Team 的 Project 身份和展示名称由 Codex 管理。CodexAgentTeam 只保存 `teamId`、一个稳定的 Team 目录和最小成员身份信息。每次进入 Dashboard 都从 Codex 读取当前 Team 名称、成员 cwd 与运行态，不重复持久化原生状态。
-
-## 关键能力保持原生
-
-| CodexAgentTeam 管理 | Codex 管理 |
-| --- | --- |
-| Team 注册关系与成员元数据 | Team 身份、名称、外观与 roots |
-| 职责与头像 | Thread 历史与存储 |
-| Team 与成员目录准备 | Turn、工具和审批 |
-| 显式队友路由 | 模型与推理行为 |
-| Dashboard 投影 | 运行态、会话渲染与导航 |
-
-CodexAgentTeam 不修改 Codex SQLite、rollout 文件、`config.toml`、认证信息或 Thread 数据格式。移除成员时归档原生会话，并保留全部成员目录文件与 Git 分支。
+一个 Team 对应一个原生 Codex Project，一位成员对应一条持久原生 Thread。成员名称只是 Thread 显示名，不是路由或文件身份。协作从原生 Thread 信息识别发送者，只在同一 Team 内解析目标，并提交一个原生 Turn。系统没有 Task 数据库、聊天记录副本、自定义 App Server 或第二套聊天 UI。
 
 ## 可选终端视图
 
-在 Dashboard 的团队标题行中，通过终端下拉菜单选择 **Ghostty** 或 **cmux**，即可把同一批原生成员 Thread 放进一个标签页或工作区，并使用成员标题分屏。这只是 Team 的另一种视图，不是另一套 Session 模型。
-
-Runtime 启动时只检测一次终端安装情况；未安装的应用会置灰，已安装应用显示其 macOS 原生图标。Ghostty 和 cmux 都通过各自原生的 AppleScript 自动化接口打开，因此不需要 cmux control socket，也不要求用户开启全局 `allowAll`。
+在 Team 标题行选择 **Ghostty** 或 **cmux**，即可把同一批原生成员 Thread 放入原生分屏。未安装应用会置灰，不需要配置 cmux control socket。
 
 ## 安全与兼容性
 
-- 未选择 Git 来源时，在 Team 目录内创建一个空工作目录。
-- 选择本地来源时必须是 Git 仓库；CodexAgentTeam 在成员目录中创建隔离 worktree，绝不直接使用源 checkout。
-- 输入远程 Git 地址时，将仓库克隆到成员目录。
-- 模型与推理配置只用于创建原生 Thread；后续变更与 Thread cwd 均由 Codex 管理。
-- 移除成员只归档原生 Thread，不删除目录、worktree、分支或头像文件。
-- 每次运行只管理自己启动的临时官方 Codex App Server，不触碰用户已有的共享 daemon。
-- CodexAgentTeam Desktop 使用独立 Electron profile，不接管普通 Codex 窗口。
-- CodexAgentTeam Desktop 退出时结束专属 App Server；本次连接的终端视图也随之断开。
-- 端口和连接等待都有上限；CodexAgentTeam 不安装启动任务，也不拦截未来的 Codex 启动。
-- Desktop 私有能力变化时，集成失败关闭。
+- 本地 Git 来源会创建隔离 worktree，远程 Git 来源会 clone；不会直接修改源 checkout。
+- Codex 管理 Thread 历史、cwd、模型、Turn、工具和审批；AgentTeam 只保存 Team 注册与成员元数据。
+- 移除成员只归档 Thread 并保留工作文件；卸载插件也不会删除原生 Thread 和 `~/.codex-agent-team/`。
+- AgentTeam 不修改 Codex SQLite、rollout、`config.toml`、认证信息或 Thread 格式。
+- 全局 Desktop 入口依赖 Codex 私有能力，因此当前仍是失败关闭的 macOS 实验集成。
 
 信任边界见 [SECURITY.md](./SECURITY.md)，兼容承诺与问题清单见 [SUPPORT.md](./SUPPORT.md)，媒体授权见 [ASSETS.md](./ASSETS.md)。
 
-## 数据与卸载
-
-CodexAgentTeam 在 `~/.codex-agent-team/` 下保存 Team 注册、头像、成员目录和有界运行诊断。移除插件不会删除该目录或原生 Codex 会话。卸载前先使用 **Command-Q** 退出活动中的 CodexAgentTeam 窗口；确认不再需要后，再手动删除保留数据。
-
 ## 开发
 
-`plugins/codex-agent-team/` 是唯一可安装运行源码。
-
-```text
-plugins/codex-agent-team/
-├── .codex-plugin/   # 插件清单
-├── skills/          # 面向 Agent 的启动与协作入口
-├── scripts/         # Team 管理、App Server、Desktop 与终端实现
-└── assets/avatars/  # 随插件发布的只读内置成员头像
-```
-
-自定义头像和 Team 数据属于用户数据，只保存在 `~/.codex-agent-team/`，不会写回插件目录。
+`plugins/codex-agent-team/` 是唯一可安装源码；Team 数据和自定义头像位于 `~/.codex-agent-team/`。
 
 ```sh
 npm test
