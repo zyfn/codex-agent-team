@@ -72,6 +72,8 @@ test("the installable plugin is the only runtime source tree", async () => {
     if (command === "collaborate") {
       assert.doesNotMatch(skillSource, /one[- ]hop|broadcast|auto-forward|reply chain|acceptance is not completion/i);
       assert.match(skillSource, /Do not use ordinary Codex task or thread messaging tools/);
+      assert.match(skillSource, /works from both member conversations and ordinary Codex conversations/);
+      assert.match(skillSource, /--team "<team name or id>"/);
       assert.match(skillSource, /Do not expose the command, JSON receipt, Turn ID, or transport semantics/);
     }
   }

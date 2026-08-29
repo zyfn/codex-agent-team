@@ -67,7 +67,7 @@ Once the CodexAgentTeam window is ready, use **Command-Q** to quit the current o
 
 Member creation primes the new Thread with its identity, responsibility, and working directory, so later work does not need to rediscover the Team setup.
 
-Inside a member conversation, `$codex-agent-team:collaborate` can inspect the current Team, contact a teammate, or reply to an incoming Team message.
+From any Codex conversation, `$codex-agent-team:collaborate` can inspect Teams and contact a member. Inside a member conversation it automatically keeps communication within that Team.
 
 Each Team has a user-visible `shared` directory for durable documents. Members use normal file tools there and send the absolute file path only when another teammate needs the document.
 
@@ -142,6 +142,16 @@ CodexAgentTeam stores Team registration, avatars, Member Directories, and bounde
 ## Development
 
 `plugins/codex-agent-team/` is the only installable runtime source.
+
+```text
+plugins/codex-agent-team/
+├── .codex-plugin/   # manifest
+├── skills/          # Agent-facing launch and collaboration entry points
+├── scripts/         # Team management, App Server, Desktop, and terminal implementation
+└── assets/avatars/  # read-only built-in member avatars shipped with the plugin
+```
+
+Custom avatars and Team data are user data under `~/.codex-agent-team/`; they are never written back into the plugin bundle.
 
 ```sh
 npm test

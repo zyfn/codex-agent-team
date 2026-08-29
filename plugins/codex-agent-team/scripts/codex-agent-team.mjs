@@ -106,6 +106,7 @@ async function runCollaborationCommand(argv, {
     }
     const receipt = await manager.collaborate({
       ...source,
+      team: options.team,
       target: requiredOption(options.target, "Target member"),
       message: requiredOption(options.message, "Message")
     });

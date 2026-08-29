@@ -222,16 +222,35 @@ export function createCodexAdapter({
     async sendMemberMessage(member, text) {
       const clientUserMessageId = randomUUID();
       const input = [{ type: "text", text }];
-      try {
+      const start = async () => {
         const started = await request("turn/start", {
           threadId: member.threadId,
           clientUserMessageId,
           input,
         });
-        const turnId = responseId(started?.turn?.id, "turn/start");
+        return responseId(started?.turn?.id, "turn/start");
+      };
+      let startError;
+      try {
+        const turnId = await start();
         return { accepted: true, threadId: member.threadId, turnId };
       } catch (error) {
-        if (!activeTurnConflict(error)) throw error;
+        startError = error;
+      }
+      if (missingThread(startError)) {
+        await request("thread/resume", {
+          threadId: member.threadId,
+          developerInstructions: buildMemberInstructions(member),
+          excludeTurns: true,
+        });
+        try {
+          const turnId = await start();
+          return { accepted: true, threadId: member.threadId, turnId };
+        } catch (error) {
+          startError = error;
+        }
+      }
+      if (activeTurnConflict(startError)) {
         const current = await request("thread/read", {
           threadId: member.threadId,
           includeTurns: true,
@@ -239,7 +258,7 @@ export function createCodexAdapter({
         const activeTurn = [...(current?.thread?.turns ?? [])]
           .reverse()
           .find((turn) => turn?.status === "inProgress" && turn?.id);
-        if (!activeTurn) throw error;
+        if (!activeTurn) throw startError;
         const steered = await request("turn/steer", {
           threadId: member.threadId,
           expectedTurnId: activeTurn.id,
@@ -249,6 +268,7 @@ export function createCodexAdapter({
         const turnId = responseId(steered?.turnId, "turn/steer");
         return { accepted: true, threadId: member.threadId, turnId };
       }
+      throw startError;
     },
     async archiveMember(team, member) {
       let detached = false;
@@ -364,6 +384,11 @@ function rolloutNotReady(error) {
 
 function activeTurnConflict(error) {
   return /active or pending turn|already has an active turn|turn is (?:already )?(?:active|in progress)/i
+    .test(error instanceof Error ? error.message : String(error));
+}
+
+function missingThread(error) {
+  return /thread not found|no rollout found for thread|rollout.*not found/i
     .test(error instanceof Error ? error.message : String(error));
 }
 

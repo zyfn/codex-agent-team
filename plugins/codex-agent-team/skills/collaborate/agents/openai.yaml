@@ -1,7 +1,7 @@
 interface:
   display_name: "Collaborate in CodexAgentTeam"
-  short_description: "Work with members of your CodexAgentTeam"
-  default_prompt: "Use $codex-agent-team:collaborate to inspect my Team, contact a teammate, or reply to a Team message."
+  short_description: "Inspect Teams or contact an AgentTeam member"
+  default_prompt: "Use $codex-agent-team:collaborate to inspect AgentTeam, contact a member from any Codex conversation, or reply to a Team message."
 
 policy:
   allow_implicit_invocation: true

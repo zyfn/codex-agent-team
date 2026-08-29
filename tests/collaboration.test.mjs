@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   messageLeaseFile,
-  resolveMemberContext,
+  resolveCollaborationContext,
   resolveMessageRoute
 } from "../plugins/codex-agent-team/scripts/lib/manager/collaboration.mjs";
 
@@ -20,28 +20,37 @@ const snapshot = {
   }],
 };
 
-test("member context returns identity, responsibility, directory, and peers in one read", () => {
-  assert.deepEqual(resolveMemberContext(snapshot, {
+test("member context returns one consistent Team context shape", () => {
+  assert.deepEqual(resolveCollaborationContext(snapshot, {
     cwd: "/tmp/team/frontend/src"
   }), {
-    team: {
+    currentMember: {
       teamId: "team-1",
-      name: "商业化团队",
-      sharedDirectory: "/tmp/team/shared",
-    },
-    self: {
       threadId: "thread-front",
       name: "前端",
       role: "负责用户界面",
       cwd: "/tmp/team/frontend"
     },
-    peers: [{
-      threadId: "thread-back",
-      name: "后端",
-      role: "负责服务接口",
-      cwd: "/tmp/team/backend"
+    teams: [{
+      teamId: "team-1",
+      name: "商业化团队",
+      sharedDirectory: "/tmp/team/shared",
+      members: [
+        { threadId: "thread-front", name: "前端", role: "负责用户界面", cwd: "/tmp/team/frontend" },
+        { threadId: "thread-back", name: "后端", role: "负责服务接口", cwd: "/tmp/team/backend" }
+      ]
     }]
   });
+});
+
+test("ordinary Codex context can inspect Teams without pretending to be a member", () => {
+  const context = resolveCollaborationContext(snapshot, {
+    sourceThreadId: "ordinary-thread",
+    cwd: "/tmp/unrelated",
+  });
+
+  assert.equal(context.currentMember, null);
+  assert.deepEqual(context.teams.map(({ name }) => name), ["商业化团队"]);
 });
 
 test("member communication resolves source by native thread and target inside the same Team", () => {
@@ -62,6 +71,39 @@ test("member communication resolves source from a path inside the Member Directo
     target: "后端",
     cwd: "/tmp/team/frontend/src",
   }).sourceName, "前端");
+});
+
+test("ordinary Codex conversation can message a globally unique Team member", () => {
+  assert.deepEqual(resolveMessageRoute(snapshot, {
+    target: "后端",
+    cwd: "/tmp/unrelated",
+    sourceThreadId: "ordinary-thread",
+  }), {
+    teamId: "team-1",
+    sourceName: "User",
+    targetThreadId: "thread-back",
+    targetName: "后端",
+  });
+});
+
+test("ordinary conversation selects a Team when member names are duplicated", () => {
+  const duplicated = structuredClone(snapshot);
+  duplicated.teams.push({
+    teamId: "team-2",
+    name: "平台团队",
+    sharedDirectory: "/tmp/platform/shared",
+    members: [{ name: "后端", role: "平台后端", cwd: "/tmp/platform/backend", threadId: "thread-platform" }],
+  });
+
+  assert.throws(() => resolveMessageRoute(duplicated, {
+    target: "后端",
+    cwd: "/tmp/unrelated",
+  }), /specify a Team/);
+  assert.equal(resolveMessageRoute(duplicated, {
+    team: "平台团队",
+    target: "后端",
+    cwd: "/tmp/unrelated",
+  }).targetThreadId, "thread-platform");
 });
 
 test("a shared Team directory never guesses which member is sending", () => {

@@ -67,7 +67,7 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 
 创建成员时，CodexAgentTeam 会向新 Thread 写入身份、职责和工作目录；后续工作不需要重新理解 Team 配置。
 
-在成员会话中，`$codex-agent-team:collaborate` 可以查看当前 Team、联系其他成员，或回复收到的 Team 消息。
+在任意 Codex 会话中，`$codex-agent-team:collaborate` 都可以查看 Team 并联系成员；在成员会话中则会自动把通信限制在当前 Team。
 
 每个 Team 都有一个用户可见的 `shared` 目录，用于保存持久共享文档。成员直接使用原生文件工具读写；只有其他成员确实需要时，才发送文件绝对路径、用途和期望动作。
 
@@ -142,6 +142,16 @@ CodexAgentTeam 在 `~/.codex-agent-team/` 下保存 Team 注册、头像、成�
 ## 开发
 
 `plugins/codex-agent-team/` 是唯一可安装运行源码。
+
+```text
+plugins/codex-agent-team/
+├── .codex-plugin/   # 插件清单
+├── skills/          # 面向 Agent 的启动与协作入口
+├── scripts/         # Team 管理、App Server、Desktop 与终端实现
+└── assets/avatars/  # 随插件发布的只读内置成员头像
+```
+
+自定义头像和 Team 数据属于用户数据，只保存在 `~/.codex-agent-team/`，不会写回插件目录。
 
 ```sh
 npm test

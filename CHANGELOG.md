@@ -14,3 +14,4 @@
 - Use the shorter **AgentTeam** label for the in-app projection, detect installed terminal applications once per Runtime, show their native macOS icons, and open them from one Team-header menu through native AppleScript automation.
 - Keep member initialization and successful message confirmations concise without exposing internal routing terminology.
 - Clarify member creation with one working-files choice at a time and a labeled destination preview.
+- Allow ordinary Codex conversations to contact a globally unique Team member, with an explicit Team selector for duplicate member names.

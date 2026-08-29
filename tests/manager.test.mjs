@@ -112,10 +112,11 @@ test("collaboration context includes the current native Team name", async () => 
 
   const context = await manager.collaborationContext({ sourceThreadId: "thread-frontend" });
 
-  assert.equal(context.team.teamId, "team-1");
-  assert.equal(context.team.name, "Renamed Team");
-  assert.equal(context.team.sharedDirectory, "/tmp/team-1/shared");
-  assert.deepEqual(context.peers.map(({ name }) => name), ["Backend"]);
+  assert.equal(context.currentMember.teamId, "team-1");
+  assert.equal(context.currentMember.name, "Frontend");
+  assert.equal(context.teams[0].name, "Renamed Team");
+  assert.equal(context.teams[0].sharedDirectory, "/tmp/team-1/shared");
+  assert.deepEqual(context.teams[0].members.map(({ name }) => name), ["Frontend", "Backend"]);
 });
 
 test("sending to a member submits exactly one native Turn without reading Team metadata", async () => {
@@ -183,6 +184,59 @@ test("sending to a busy member steers its current native Turn", async () => {
     turnId: "turn-active",
     target: "Backend",
   });
+});
+
+test("ordinary Codex conversation sends to a unique Team member as the user", async () => {
+  const calls = [];
+  const manager = createCodexAgentTeamManager({
+    store: collaborationStore(),
+    rpc: rpcStub(calls, {
+      "turn/start": () => ({ turn: { id: "turn-user-message" } }),
+    }),
+    teamsRoot: "/tmp/unused",
+    acquireMessageLease: async () => ({ async release() {} }),
+  });
+
+  const receipt = await manager.collaborate({
+    sourceThreadId: "ordinary-thread",
+    cwd: "/tmp/unrelated",
+    target: "Backend",
+    message: "You have joined the Team.",
+  });
+
+  assert.equal(receipt.target, "Backend");
+  assert.match(calls[0].params.input[0].text, /From: User/);
+});
+
+test("message delivery resumes only an unloaded target Thread and retries once", async () => {
+  const calls = [];
+  let starts = 0;
+  const manager = createCodexAgentTeamManager({
+    store: collaborationStore(),
+    rpc: rpcStub(calls, {
+      "turn/start": () => {
+        starts += 1;
+        if (starts === 1) throw new Error("thread not found: thread-backend");
+        return { turn: { id: "turn-after-resume" } };
+      },
+      "thread/resume": () => ({ thread: { id: "thread-backend" } }),
+    }),
+    teamsRoot: "/tmp/unused",
+    acquireMessageLease: async () => ({ async release() {} }),
+  });
+
+  const receipt = await manager.collaborate({
+    sourceThreadId: "ordinary-thread",
+    cwd: "/tmp/unrelated",
+    target: "Backend",
+    message: "You have joined the Team.",
+  });
+
+  assert.deepEqual(calls.map(({ method }) => method), ["turn/start", "thread/resume", "turn/start"]);
+  assert.equal(calls[1].params.threadId, "thread-backend");
+  assert.equal(calls[1].params.excludeTurns, true);
+  assert.match(calls[1].params.developerInstructions, /persistent member managed by CodexAgentTeam/);
+  assert.equal(receipt.turnId, "turn-after-resume");
 });
 
 test("Dashboard snapshots read native Team names and member runtime without resuming Threads", async () => {
