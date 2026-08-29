@@ -17,7 +17,7 @@ They are fictional characters and are not intended to represent or imply endorse
 
 ## Documentation artwork
 
-`docs/assets/native-team-model.svg` is original project documentation artwork and is distributed under the MIT License.
+`docs/assets/native-team-model.svg` and the product screenshots under `docs/assets/` are original project documentation media and are distributed under the MIT License.
 
 Product screenshots may contain the Codex interface and related third-party names or marks. They are included only to document interoperability; rights in third-party interfaces and marks remain with their respective owners.
 

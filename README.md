@@ -22,7 +22,7 @@ CodexAgentTeam organizes native Codex conversations into durable teams. Each mem
 > [!IMPORTANT]
 > CodexAgentTeam is an experimental macOS preview. Native Threads and App Server events remain authoritative; the global Desktop entry currently depends on a small, fail-closed CDP adapter.
 
-![AgentTeam Dashboard showing one Team and its native Codex conversation members](./docs/assets/dashboard.png)
+![AgentTeam Dashboard monitoring multiple native Codex teams and member states](./docs/assets/dashboard.webp)
 
 ## What you get
 
@@ -70,6 +70,8 @@ Member creation primes the new Thread with its identity, responsibility, and wor
 Inside a member conversation, `$codex-agent-team:collaborate` can inspect the current Team, contact a teammate, or reply to an incoming Team message. Ordinary Codex conversations cannot send Team messages.
 
 Each Team has a user-visible `shared` directory for durable documents. Members use normal file tools there and send the absolute file path only when another teammate needs the document.
+
+![A Product member dispatching one brief to Research, Design, Engineering, and QA through native Team collaboration](./docs/assets/collaboration.webp)
 
 ## How it works
 

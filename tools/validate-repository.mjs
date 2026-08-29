@@ -50,7 +50,8 @@ for (const avatar of [
 ]) {
   await access(path.join(pluginRoot, "assets", "avatars", avatar));
 }
-await access(path.join(root, "docs", "assets", "dashboard.png"));
+await access(path.join(root, "docs", "assets", "dashboard.webp"));
+await access(path.join(root, "docs", "assets", "collaboration.webp"));
 await access(path.join(root, "docs", "assets", "native-team-model.svg"));
 
 const forbiddenRoots = ["scripts", "CONTEXT.md", "ARCHITECTURE.md", "COMPATIBILITY-ENGINEERING.md"];

@@ -22,7 +22,7 @@ CodexAgentTeam 把原生 Codex 会话组织成长期存在的团队。每位成�
 > [!IMPORTANT]
 > CodexAgentTeam 当前是 macOS 实验预览版。原生 Thread 与 App Server 事件始终是权威事实；全局 Desktop 入口目前依赖一层很小的、失败关闭的 CDP 适配器。
 
-![AgentTeam Dashboard 展示一个 Team 与对应的原生 Codex 会话成员](./docs/assets/dashboard.png)
+![AgentTeam Dashboard 同时监控多个原生 Codex Team 与成员状态](./docs/assets/dashboard.webp)
 
 ## 你会得到什么
 
@@ -70,6 +70,8 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 在成员会话中，`$codex-agent-team:collaborate` 可以查看当前 Team、联系其他成员，或回复收到的 Team 消息。普通 Codex 会话不能发送 Team 消息。
 
 每个 Team 都有一个用户可见的 `shared` 目录，用于保存持久共享文档。成员直接使用原生文件工具读写；只有其他成员确实需要时，才发送文件绝对路径、用途和期望动作。
+
+![Product 成员通过原生 Team 协作向 Research、Design、Engineering 与 QA 分发同一份需求](./docs/assets/collaboration.webp)
 
 ## 工作原理
 
