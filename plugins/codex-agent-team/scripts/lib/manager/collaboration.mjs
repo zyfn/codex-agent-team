@@ -4,59 +4,46 @@ import path from "node:path";
 import { isSamePathOrInside } from "../paths.mjs";
 import { normalizeName } from "./store.mjs";
 
-export function resolveMessageRoute(snapshot, { target, team: teamSelector, cwd, sourceThreadId }) {
+export function resolveMessageRoute(snapshot, { target, cwd, sourceThreadId }) {
   const wanted = requiredText(target, "Target member");
-  const teams = Array.isArray(snapshot?.teams) ? snapshot.teams : [];
-  const source = findSourceMember(snapshot, { cwd, sourceThreadId });
-  const candidateTeams = source
-    ? [source.team]
-    : selectTeams(teams, teamSelector);
-  if (source && teamSelector && !teamMatches(source.team, teamSelector)) {
-    throw new Error(`The current member belongs to Team "${source.team.name ?? source.team.teamId}"`);
-  }
+  const source = resolveSourceMember(snapshot, { cwd, sourceThreadId });
   const normalized = normalizeName(wanted);
-  const matches = candidateTeams.flatMap((team) => (team.members ?? [])
-    .filter((member) => normalizeName(member.threadId) === normalized || normalizeName(member.name) === normalized)
-    .map((member) => ({ team, member })));
+  const matches = source.team.members.filter((member) =>
+    normalizeName(member.threadId) === normalized || normalizeName(member.name) === normalized
+  );
   if (matches.length !== 1) {
-    if (!matches.length) {
-      const scope = teamSelector ? `Team "${teamSelector}"` : "CodexAgentTeam";
-      throw new Error(`${scope} has no member matching: ${wanted}`);
-    }
-    if (!source && !teamSelector) {
-      throw new Error(`Multiple Teams have a member matching "${wanted}"; specify a Team with --team`);
-    }
-    throw new Error(`Team "${matches[0].team.name ?? matches[0].team.teamId}" has multiple members matching: ${wanted}`);
+    const teamLabel = source.team.name ?? source.team.teamId;
+    if (!matches.length) throw new Error(`Team "${teamLabel}" has no member matching: ${wanted}`);
+    throw new Error(`Team "${teamLabel}" has multiple members matching: ${wanted}`);
   }
   const destination = matches[0];
-  if (source && destination.member.threadId === source.member.threadId) {
-    throw new Error("A Team member cannot message itself");
-  }
+  if (destination.threadId === source.member.threadId) throw new Error("A Team member cannot message itself");
   return {
-    teamId: destination.team.teamId,
-    sourceName: source?.member.name ?? "User",
-    targetThreadId: destination.member.threadId,
-    targetName: destination.member.name,
+    teamId: source.team.teamId,
+    sourceName: source.member.name,
+    targetThreadId: destination.threadId,
+    targetName: destination.name,
   };
 }
 
-export function resolveCollaborationContext(snapshot, { cwd, sourceThreadId }) {
-  const teams = Array.isArray(snapshot?.teams) ? snapshot.teams : [];
-  const source = findSourceMember(snapshot, { cwd, sourceThreadId });
-  const identity = (member) => ({
+export function resolveMemberContext(snapshot, { cwd, sourceThreadId }) {
+  const source = resolveSourceMember(snapshot, { cwd, sourceThreadId });
+  const identity = (team, member) => ({
     threadId: member.threadId,
     name: member.name,
     role: String(member.role ?? "").trim(),
-    cwd: member.cwd
+    cwd: memberDirectory(team, member),
   });
   return {
-    currentMember: source ? { teamId: source.team.teamId, ...identity(source.member) } : null,
-    teams: (source ? [source.team] : teams).map((team) => ({
-      teamId: team.teamId,
-      name: team.name,
-      sharedDirectory: team.sharedDirectory,
-      members: (team.members ?? []).map(identity),
-    })),
+    team: {
+      teamId: source.team.teamId,
+      name: source.team.name,
+      sharedDirectory: source.team.sharedDirectory,
+    },
+    self: identity(source.team, source.member),
+    peers: source.team.members
+      .filter((member) => member.threadId !== source.member.threadId)
+      .map((member) => identity(source.team, member)),
   };
 }
 
@@ -65,10 +52,14 @@ export function messageLeaseFile(paths, targetThreadId) {
   return path.join(paths.runRoot, "message-locks", `${digest}.lock`);
 }
 
-function findSourceMember(snapshot, { cwd, sourceThreadId }) {
+function resolveSourceMember(snapshot, { cwd, sourceThreadId }) {
   const teams = Array.isArray(snapshot?.teams) ? snapshot.teams : [];
   const candidates = teams.flatMap((team) =>
-    (team.members ?? []).map((member) => ({ team, member }))
+    (team.members ?? []).map((member) => ({
+      team,
+      member,
+      cwd: memberDirectory(team, member),
+    }))
   );
   let source = sourceThreadId
     ? candidates.find(({ member }) => member.threadId === sourceThreadId)
@@ -76,27 +67,21 @@ function findSourceMember(snapshot, { cwd, sourceThreadId }) {
   if (!source && cwd) {
     const current = path.resolve(cwd);
     const matches = candidates
-      .filter(({ member }) => member.cwd && isSamePathOrInside(current, path.resolve(member.cwd)))
-      .sort((left, right) => right.member.cwd.length - left.member.cwd.length);
-    if (matches.length > 1 && matches[0].member.cwd.length === matches[1].member.cwd.length) {
+      .filter((candidate) => candidate.cwd && isSamePathOrInside(current, path.resolve(candidate.cwd)))
+      .sort((left, right) => right.cwd.length - left.cwd.length);
+    if (matches.length > 1 && matches[0].cwd.length === matches[1].cwd.length) {
       throw new Error("Multiple CodexAgentTeam members share this directory; native Thread identity is required");
     }
     source = matches[0];
   }
+  if (!source) throw new Error("The current conversation or directory is not a CodexAgentTeam member");
   return source;
 }
 
-function selectTeams(teams, selector) {
-  if (!selector) return teams;
-  const matches = teams.filter((team) => teamMatches(team, selector));
-  if (!matches.length) throw new Error(`CodexAgentTeam has no Team matching: ${selector}`);
-  if (matches.length > 1) throw new Error(`Multiple Teams match: ${selector}; use the Team id`);
-  return matches;
-}
-
-function teamMatches(team, selector) {
-  const normalized = normalizeName(requiredText(selector, "Team"));
-  return normalizeName(team.teamId) === normalized || normalizeName(team.name) === normalized;
+function memberDirectory(team, member) {
+  if (typeof member?.cwd === "string" && member.cwd.trim()) return member.cwd;
+  if (!team?.teamDirectory || !member?.name) return null;
+  return path.join(team.teamDirectory, "members", member.name);
 }
 
 function requiredText(value, label) {

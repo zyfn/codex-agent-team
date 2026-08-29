@@ -67,7 +67,7 @@ CodexAgentTeam 窗口准备完成后，使用 **Command-Q** 退出当前普通 C
 
 创建成员时，CodexAgentTeam 会向新 Thread 写入身份、职责和工作目录；后续工作不需要重新理解 Team 配置。
 
-在任意 Codex 会话中，`$codex-agent-team:collaborate` 都可以查看 Team 并联系成员；在成员会话中则会自动把通信限制在当前 Team。
+在成员会话中，`$codex-agent-team:collaborate` 可以查看当前 Team、联系其他成员，或回复收到的 Team 消息。普通 Codex 会话不能发送 Team 消息。
 
 每个 Team 都有一个用户可见的 `shared` 目录，用于保存持久共享文档。成员直接使用原生文件工具读写；只有其他成员确实需要时，才发送文件绝对路径、用途和期望动作。
 

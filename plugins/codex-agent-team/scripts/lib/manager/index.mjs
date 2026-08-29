@@ -7,7 +7,7 @@ import { avatarForUi, isManagedAvatar, saveAvatar } from "./avatars.mjs";
 import { createCodexAdapter } from "./codex-adapter.mjs";
 import {
   messageLeaseFile,
-  resolveCollaborationContext,
+  resolveMemberContext,
   resolveMessageRoute,
 } from "./collaboration.mjs";
 import { normalizeName } from "./store.mjs";
@@ -317,7 +317,7 @@ export function createCodexAgentTeamManager({
     const state = await store.read();
     const nativeTeams = new Map((await codex.listTeams()).map((team) => [team.teamId, team]));
     const summaries = await memberSummaries(state);
-    return resolveCollaborationContext({
+    return resolveMemberContext({
       ...state,
       teams: state.teams.map((record) => hydrateTeam(record, nativeTeams.get(record.teamId), summaries)),
     }, input);
@@ -332,16 +332,6 @@ export function createCodexAgentTeamManager({
       routingState = {
         ...state,
         teams: state.teams.map((team) => hydrateTeam(team, null, summaries)),
-      };
-    }
-    if (input.team) {
-      const nativeTeams = new Map((await codex.listTeams()).map((team) => [team.teamId, team]));
-      routingState = {
-        ...routingState,
-        teams: routingState.teams.map((team) => ({
-          ...team,
-          name: nativeTeams.get(team.teamId)?.name ?? team.name,
-        })),
       };
     }
     const route = resolveMessageRoute(routingState, input);
