@@ -17,3 +17,5 @@
 - Resolve member identity only from native Thread identity or native cwd, and lazily resume only the message target.
 - Validate the Runtime process command before trusting or signaling a persisted PID.
 - Coalesce App Server event bursts into serialized Dashboard refreshes.
+- Use a compact two-column Team monitor with lazy member rendering while preserving independent and all-Team expansion.
+- Label model choices as initial settings and reject silent provider fallback for an explicitly selected model.

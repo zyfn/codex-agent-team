@@ -82,9 +82,16 @@ export const TEAM_UI_STYLES = String.raw`
   }
 
   .cat-panel-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     justify-content: space-between;
     gap: 22px;
     margin: 0 0 22px;
+    padding: 14px 0 12px;
+    background: color-mix(in srgb, var(--background-primary, #0f1013) 78%, transparent);
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
   }
 
   .cat-brand h1 {
@@ -192,8 +199,11 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-error-dismiss:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
   .cat-notice { border: 1px solid color-mix(in srgb, var(--cat-green) 25%, transparent); background: color-mix(in srgb, var(--cat-green) 9%, transparent); color: #9fe5b1; }
 
-  .cat-team-directory { overflow: clip; border-radius: 18px; }
-  .cat-team-directory-group { border-bottom: 1px solid var(--cat-line); }
+  .cat-team-directory { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: clip; border-radius: 18px; }
+  .cat-team-directory-group { min-width: 0; border-right: 1px solid var(--cat-line); border-bottom: 1px solid var(--cat-line); }
+  .cat-team-directory-group:nth-child(2n) { border-right: 0; }
+  .cat-team-directory-group.expanded,
+  .cat-team-directory-group.wide { grid-column: 1 / -1; border-right: 0; }
   .cat-team-directory-group:last-child { border-bottom: 0; }
 
   .cat-team-expand-all {
@@ -210,13 +220,13 @@ export const TEAM_UI_STYLES = String.raw`
 
   .cat-team-directory-row {
     display: grid;
-    grid-template-columns: minmax(180px, .7fr) auto minmax(0, 1fr) auto 20px;
+    grid-template-columns: minmax(110px, .7fr) auto minmax(84px, 1fr) auto 18px;
     align-items: center;
-    gap: 18px;
+    gap: 10px;
     width: 100%;
     border: 0;
     border-radius: 0;
-    padding: 16px 20px;
+    padding: 13px 14px;
     background: transparent;
     color: inherit;
     text-align: left;
@@ -226,6 +236,7 @@ export const TEAM_UI_STYLES = String.raw`
 
   .cat-team-directory-row:hover { background: color-mix(in srgb, currentColor 4.5%, transparent); }
   .cat-team-directory-row[aria-expanded="true"] { background: color-mix(in srgb, currentColor 3.2%, transparent); }
+  .cat-team-directory-group.expanded .cat-team-directory-row { grid-template-columns: minmax(180px, .7fr) auto minmax(0, 1fr) auto 20px; gap: 18px; padding: 16px 20px; }
   .cat-team-directory-name { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 620; letter-spacing: -.012em; text-overflow: ellipsis; white-space: nowrap; }
 
   .cat-member-carousel {
@@ -261,7 +272,7 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-member-avatar-ring.running { background: conic-gradient(from 20deg, var(--cat-blue) 0 30%, #284f73 30% 48%, #62adff 48% 76%, #284f73 76%); box-shadow: 0 0 0 1px #ffffff1b, 0 0 14px #0a84ff2b; animation: catRunningRing 2.4s linear infinite; }
   .cat-member-avatar-ring.running .cat-avatar { animation: catCounterRotate 2.4s linear infinite; }
 
-  .cat-team-state { min-width: 92px; color: #8b95a4; font-size: 12px; font-weight: 560; text-align: right; white-space: nowrap; }
+  .cat-team-state { min-width: 72px; color: #8b95a4; font-size: 12px; font-weight: 560; text-align: right; white-space: nowrap; }
   .cat-team-state.error { color: var(--cat-red); }
   .cat-team-state.waiting { color: var(--cat-amber); }
   .cat-team-state.running { color: var(--cat-blue); }
@@ -500,6 +511,11 @@ export const TEAM_UI_STYLES = String.raw`
   @keyframes catWaitingPulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--cat-amber) 16%, transparent); } }
   @keyframes catRunningRing { to { transform: rotate(360deg); } }
   @keyframes catCounterRotate { to { transform: rotate(-360deg); } }
+
+  @media (max-width: 900px) {
+    .cat-team-directory { grid-template-columns: minmax(0, 1fr); }
+    .cat-team-directory-group { border-right: 0; }
+  }
 
   @media (max-width: 760px) {
     .cat-shell { padding: 24px 16px 52px; }

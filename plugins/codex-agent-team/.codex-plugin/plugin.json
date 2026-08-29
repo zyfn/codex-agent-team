@@ -1,6 +1,6 @@
 {
   "name": "codex-agent-team",
-  "version": "0.0.0+codex.20260829114111",
+  "version": "0.0.0+codex.20260829133059",
   "description": "Organize native Codex conversations into persistent teams (macOS preview).",
   "author": {
     "name": "zyfn",

@@ -62,11 +62,11 @@ export function chooseNativeDirectory(hostWindow, { timeoutMs = 120_000 } = {}) 
 
 function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, styles, chooseNativeDirectory) {
   const state = window.__codexAgentTeam ??= {};
-  if (state.uiRevision !== "top-navigation-v6") state.dispose?.();
-  state.uiRevision = "top-navigation-v6";
+  if (state.uiRevision !== "top-navigation-v7") state.dispose?.();
+  state.uiRevision = "top-navigation-v7";
   state.snapshot = snapshot;
   state.bindingName = bindingName;
-  state.expandedTeamIds ??= new Set((snapshot.teams ?? []).map((team) => team.teamId));
+  state.expandedTeamIds ??= new Set();
 
   const clientLocale = () => document.documentElement.lang
     || navigator.languages?.[0]
@@ -102,7 +102,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       remoteSourceHint: "AgentTeam clones this repository into the member's working directory.", emptySourceHint: "Start with a new empty folder for this member.",
       localSourceRequired: "Choose a local Git repository.", remoteSourceRequired: "Enter a Git repository URL.",
       memberWorkingDirectory: "Member working directory", memberDirectoryPlaceholder: "<member name>",
-      model: "Model", reasoning: "Reasoning effort",
+      model: "Initial model", reasoning: "Initial reasoning",
       codexDefault: "Codex default", modelDefault: "Model default ({effort})", defaultOption: "Default",
       createMember: "Create Member", preparingMember: "Preparing Member Directory and conversation…", savingMember: "Saving…", dismissError: "Dismiss",
       avatarTooLarge: "Choose an image smaller than 2 MB",
@@ -136,7 +136,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       remoteSourceHint: "AgentTeam 会把该仓库克隆到成员工作目录。", emptySourceHint: "为这位成员创建一个新的空目录。",
       localSourceRequired: "请选择一个本地 Git 仓库。", remoteSourceRequired: "请输入 Git 仓库地址。",
       memberWorkingDirectory: "成员工作目录", memberDirectoryPlaceholder: "<成员名称>",
-      model: "模型", reasoning: "推理强度",
+      model: "初始模型", reasoning: "初始推理强度",
       codexDefault: "跟随 Codex 默认", modelDefault: "模型默认（{effort}）", defaultOption: "默认",
       createMember: "创建成员", preparingMember: "正在准备成员目录并创建会话…", savingMember: "正在保存…", dismissError: "关闭",
       avatarTooLarge: "请选择小于 2 MB 的图片",
@@ -215,12 +215,12 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
 
   function ensureStyles() {
     const existing = document.querySelector("#codex-agent-team-styles");
-    if (existing?.dataset.revision === "top-navigation-v6") return;
+    if (existing?.dataset.revision === "top-navigation-v7") return;
     existing?.remove();
     document.querySelector("#codex-agent-team-style-refinements")?.remove();
     const style = document.createElement("style");
     style.id = "codex-agent-team-styles";
-    style.dataset.revision = "top-navigation-v6";
+    style.dataset.revision = "top-navigation-v7";
     style.textContent = styles;
     document.head.append(style);
   }
@@ -418,16 +418,22 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
     }
     const directory = document.createElement("section");
     directory.className = "cat-team-directory cat-glass";
+    let pendingCompactGroup = null;
     for (const team of teams) {
       const expanded = state.expandedTeamIds.has(team.teamId);
+      if (expanded && pendingCompactGroup) {
+        pendingCompactGroup.classList.add("wide");
+        pendingCompactGroup = null;
+      }
       const group = document.createElement("article");
       group.className = "cat-team-directory-group";
+      group.classList.toggle("expanded", expanded);
       const row = document.createElement("div");
       row.className = "cat-team-directory-row";
       row.tabIndex = 0;
       row.setAttribute("role", "button");
       row.setAttribute("aria-expanded", String(expanded));
-      row.setAttribute("aria-controls", `cat-team-members-${team.teamId}`);
+      if (expanded) row.setAttribute("aria-controls", `cat-team-members-${team.teamId}`);
       const name = document.createElement("span");
       name.className = "cat-team-directory-name";
       name.textContent = team.name;
@@ -500,63 +506,68 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
         event.preventDefault();
         toggleTeam();
       };
-      const members = document.createElement("div");
-      members.id = `cat-team-members-${team.teamId}`;
-      members.className = "cat-team-directory-members";
-      members.hidden = !expanded;
-      const memberActions = document.createElement("div");
-      memberActions.className = "cat-team-inline-actions";
-      for (const [text, handler] of [[t("addMember"), () => showMemberForm(team)], [t("editTeam"), () => showTeamForm(team)], [t("removeTeam"), () => showConfirmation({ title: t("removeTeamTitle", { name: team.name }), description: t("removeTeamDescription"), confirmText: t("removeTeam"), action: { type: "removeTeam", teamId: team.teamId } })]]) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "cat-text-action";
-        button.textContent = text;
-        button.onclick = handler;
-        memberActions.append(button);
-      }
-      members.append(memberActions);
-      const list = document.createElement("div");
-      list.className = "cat-member-list";
-      for (const member of [...team.members].sort((left, right) => rank[memberStatus(left)] - rank[memberStatus(right)] || left.name.localeCompare(right.name, clientLocale()))) {
-        const memberRow = document.createElement("div");
-        memberRow.className = "cat-member-row";
-        const memberOpen = document.createElement("button");
-        memberOpen.type = "button";
-        memberOpen.className = "cat-member-open";
-        memberOpen.append(avatarRing(member, 42));
-        const copy = document.createElement("div");
-        copy.className = "cat-member-copy";
-        const memberName = document.createElement("div");
-        memberName.className = "cat-member-name";
-        memberName.textContent = member.name;
-        const role = document.createElement("div");
-        role.className = "cat-member-role";
-        role.textContent = member.role || t("noRole");
-        copy.append(memberName, role);
-        const rowActions = document.createElement("div");
-        rowActions.className = "cat-member-row-actions";
-        for (const [text, handler] of [[t("edit"), () => showMemberForm(team, member)], [t("removeMember"), () => showConfirmation({ title: t("removeMemberTitle", { name: member.name }), description: t("removeMemberDescription"), confirmText: t("removeMember"), action: { type: "removeMember", teamId: team.teamId, threadId: member.threadId } })]]) {
+      group.append(row);
+      if (expanded) {
+        const members = document.createElement("div");
+        members.id = `cat-team-members-${team.teamId}`;
+        members.className = "cat-team-directory-members";
+        const memberActions = document.createElement("div");
+        memberActions.className = "cat-team-inline-actions";
+        for (const [text, handler] of [[t("addMember"), () => showMemberForm(team)], [t("editTeam"), () => showTeamForm(team)], [t("removeTeam"), () => showConfirmation({ title: t("removeTeamTitle", { name: team.name }), description: t("removeTeamDescription"), confirmText: t("removeTeam"), action: { type: "removeTeam", teamId: team.teamId } })]]) {
           const button = document.createElement("button");
           button.type = "button";
           button.className = "cat-text-action";
           button.textContent = text;
-          button.onclick = (event) => { event.stopPropagation(); handler(); };
-          rowActions.append(button);
+          button.onclick = handler;
+          memberActions.append(button);
         }
-        memberOpen.append(copy, runtimeText(member));
-        memberOpen.onclick = () => openThread(team.teamId, member);
-        memberRow.append(memberOpen, rowActions);
-        list.append(memberRow);
+        members.append(memberActions);
+        const list = document.createElement("div");
+        list.className = "cat-member-list";
+        for (const member of [...team.members].sort((left, right) => rank[memberStatus(left)] - rank[memberStatus(right)] || left.name.localeCompare(right.name, clientLocale()))) {
+          const memberRow = document.createElement("div");
+          memberRow.className = "cat-member-row";
+          const memberOpen = document.createElement("button");
+          memberOpen.type = "button";
+          memberOpen.className = "cat-member-open";
+          memberOpen.append(avatarRing(member, 42));
+          const copy = document.createElement("div");
+          copy.className = "cat-member-copy";
+          const memberName = document.createElement("div");
+          memberName.className = "cat-member-name";
+          memberName.textContent = member.name;
+          const role = document.createElement("div");
+          role.className = "cat-member-role";
+          role.textContent = member.role || t("noRole");
+          copy.append(memberName, role);
+          const rowActions = document.createElement("div");
+          rowActions.className = "cat-member-row-actions";
+          for (const [text, handler] of [[t("edit"), () => showMemberForm(team, member)], [t("removeMember"), () => showConfirmation({ title: t("removeMemberTitle", { name: member.name }), description: t("removeMemberDescription"), confirmText: t("removeMember"), action: { type: "removeMember", teamId: team.teamId, threadId: member.threadId } })]]) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "cat-text-action";
+            button.textContent = text;
+            button.onclick = (event) => { event.stopPropagation(); handler(); };
+            rowActions.append(button);
+          }
+          memberOpen.append(copy, runtimeText(member));
+          memberOpen.onclick = () => openThread(team.teamId, member);
+          memberRow.append(memberOpen, rowActions);
+          list.append(memberRow);
+        }
+        if (!team.members.length) {
+          const empty = document.createElement("div");
+          empty.className = "cat-team-empty";
+          empty.textContent = t("noMembers");
+          list.append(empty);
+        }
+        members.append(list);
+        group.append(members);
       }
-      if (!team.members.length) {
-        const empty = document.createElement("div");
-        empty.className = "cat-team-empty";
-        empty.textContent = t("noMembers");
-        list.append(empty);
-      }
-      members.append(list);
-      group.append(row, members);
       directory.append(group);
+      if (expanded) pendingCompactGroup = null;
+      else if (pendingCompactGroup) pendingCompactGroup = null;
+      else pendingCompactGroup = group;
     }
     if (!teams.length) {
       const empty = document.createElement("div");

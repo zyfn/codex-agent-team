@@ -160,7 +160,10 @@ export function createCodexAdapter({
         const started = await request("thread/start", {
           cwd: member.cwd,
           projectId: team.teamId,
-          ...(member.model ? { model: member.model } : {}),
+          ...(member.model ? {
+            model: member.model,
+            allowProviderModelFallback: false,
+          } : {}),
           ...(member.reasoningEffort
             ? { config: { model_reasoning_effort: member.reasoningEffort } }
             : {}),

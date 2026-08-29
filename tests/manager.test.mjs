@@ -35,6 +35,8 @@ test("creating a Team and member uses native Codex identity and an independent m
     teamId: team.teamId,
     name: "Frontend",
     role: "Own the UI",
+    model: "gpt-5.6-luna",
+    reasoningEffort: "high",
   });
 
   assert.equal(team.teamId, "team-native");
@@ -49,6 +51,13 @@ test("creating a Team and member uses native Codex identity and an independent m
     "thread/name/set",
   ]);
   const initialization = calls.find(({ method }) => method === "turn/start").params.input[0].text;
+  const threadStart = calls.find(({ method }) => method === "thread/start").params;
+  const turnStart = calls.find(({ method }) => method === "turn/start").params;
+  assert.equal(threadStart.model, "gpt-5.6-luna");
+  assert.equal(threadStart.allowProviderModelFallback, false);
+  assert.equal(threadStart.config.model_reasoning_effort, "high");
+  assert.equal(turnStart.model, "gpt-5.6-luna");
+  assert.equal(turnStart.effort, "high");
   assert.match(initialization, /confirm that you are ready/i);
   assert.doesNotMatch(initialization, /one[- ]hop|broadcast|forward|reply loop/i);
   assert.deepEqual(desktopCalls.map(([method]) => method), ["upsert", "assign"]);
