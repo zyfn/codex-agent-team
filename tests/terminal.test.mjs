@@ -6,10 +6,10 @@ import path from "node:path";
 import test from "node:test";
 
 import {
+  buildCmuxScript,
   buildGhosttyScript,
   createCmuxTerminal,
   createGhosttyTerminal,
-  resolveCmuxExecutable,
   splitPlan,
   createTeamTerminal
 } from "../plugins/codex-agent-team/scripts/lib/runtime/terminal.mjs";
@@ -67,33 +67,25 @@ test("terminal layouts form a compact grid without inventing pane state", () => 
   ]);
 });
 
-test("terminal availability is detected without opening either application", async () => {
+test("terminal applications expose installation state and native app icons without opening them", async () => {
   const launcher = createTeamTerminal({
     manager: null,
     paths: null,
     codexCli: null,
     terminals: {
-      ghostty: createGhosttyTerminal({ async accessFile() {} }),
+      ghostty: createGhosttyTerminal({
+        async accessFile() {},
+        async loadIcon() { return "data:image/png;base64,ghostty"; }
+      }),
       cmux: createCmuxTerminal({
-        cmux: "/missing/cmux",
         async accessFile() { throw Object.assign(new Error("missing"), { code: "ENOENT" }); }
       })
     }
   });
-  assert.deepEqual(await launcher.availability(), { ghostty: true, cmux: false });
-});
-
-test("cmux resolves a PATH-installed executable before the app bundle fallback", async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-cmux-path-"));
-  const bin = path.join(root, "bin");
-  const executable = path.join(bin, "cmux");
-  await import("node:fs/promises").then(async ({ chmod, mkdir }) => {
-    await mkdir(bin, { recursive: true });
-    await writeFile(executable, "#!/bin/sh\n");
-    await chmod(executable, 0o755);
+  assert.deepEqual(await launcher.applications(), {
+    ghostty: { available: true, icon: "data:image/png;base64,ghostty" },
+    cmux: { available: false, icon: null }
   });
-  assert.equal(resolveCmuxExecutable({ PATH: bin }), executable);
-  await rm(root, { recursive: true, force: true });
 });
 
 test("Ghostty uses one native tab with native split commands", async (context) => {
@@ -122,26 +114,13 @@ test("Ghostty uses one native tab with native split commands", async (context) =
   assert.equal(result.status, 0, result.stderr);
 });
 
-test("cmux creates one named workspace and one native split per remaining member", async () => {
+test("cmux uses its native AppleScript API instead of requiring control-socket access", async () => {
   const calls = [];
-  const replies = [
-    { stdout: "pong\n" },
-    { stdout: "" },
-    { stdout: "workspace:2 00000000-0000-0000-0000-000000000002\n" },
-    { stdout: "surface:3 00000000-0000-0000-0000-000000000003\n" },
-    { stdout: "surface:4\n" },
-    { stdout: "" },
-    { stdout: "" },
-    { stdout: "surface:5\n" },
-    { stdout: "" },
-    { stdout: "" },
-    { stdout: "" }
-  ];
   const adapter = createCmuxTerminal({
-    cmux: process.execPath,
+    async accessFile() {},
     async execFile(file, args) {
       calls.push([file, args]);
-      return replies.shift() ?? { stdout: "" };
+      return { stdout: "opened\n" };
     }
   });
   const result = await adapter.open({
@@ -154,30 +133,37 @@ test("cmux creates one named workspace and one native split per remaining member
     ]
   });
 
-  assert.equal(result.workspace, "workspace:2");
-  assert.equal(calls.filter(([, args]) => args.includes("new-split")).length, 2);
-  assert.deepEqual(calls.filter(([, args]) => args[0] === "send-key").map(([, args]) => args.at(-1)), ["enter", "enter"]);
+  assert.deepEqual(result, { terminal: "cmux", disposition: "opened" });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "/usr/bin/osascript");
+  assert.equal(calls[0][1][0], "-e");
+  assert.match(calls[0][1][1], /tell application "cmux"/);
+  assert.match(calls[0][1][1], /split terminal1 direction right/);
+  assert.match(calls[0][1][1], /split terminal1 direction down/);
+  assert.doesNotMatch(calls[0][1][1], /CMUX_SOCKET_MODE|ping|list-workspaces/);
 });
 
-test("cmux reports restricted socket access instead of a readiness timeout", async () => {
-  const denied = Object.assign(new Error("cmux command failed"), {
-    stderr: "Access denied - only processes started inside cmux can connect"
+test("cmux AppleScript waits for each terminal and submits the native resume command", async (context) => {
+  const script = buildCmuxScript({
+    id: "team-1",
+    title: "CodexAgentTeam · Product",
+    panes: [
+      { title: "Frontend", cwd: "/tmp/frontend", command: "codex resume front" },
+      { title: "Backend", cwd: "/tmp/backend", command: "codex resume back" }
+    ]
   });
-  const adapter = createCmuxTerminal({
-    cmux: process.execPath,
-    async accessFile() {},
-    async delay() {},
-    async execFile(file) {
-      if (file === "/usr/bin/open") return { stdout: "" };
-      throw denied;
-    }
-  });
-  await assert.rejects(
-    adapter.open({
-      id: "team-1",
-      title: "CodexAgentTeam · Product",
-      panes: [{ title: "A", cwd: "/tmp/a", command: "codex resume a" }]
-    }),
-    /CMUX_SOCKET_MODE=allowAll/
-  );
+  assert.match(script, /rename-workspace.*codex resume front" to terminal1/);
+  assert.ok(script.includes('perform action "text:\\\\x0d" on terminal1'));
+  assert.match(script, /repeat 50 times/);
+  assert.match(script, /select tab teamTab/);
+  assert.match(script, /return "opened"/);
+
+  if (process.platform !== "darwin") return;
+  const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-cmux-applescript-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const result = spawnSync("/usr/bin/osacompile", [
+    "-e", script,
+    "-o", path.join(root, "cmux.scpt")
+  ], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
 });

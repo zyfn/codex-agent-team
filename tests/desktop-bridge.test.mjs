@@ -423,7 +423,12 @@ test("Dashboard terminal actions route through the selected native terminal impl
   };
   const manager = { async snapshot() { return { teams: [] }; } };
   const terminalLauncher = {
-    async availability() { return { ghostty: true, cmux: false }; },
+    async applications() {
+      return {
+        ghostty: { available: true, icon: "data:image/png;base64,ghostty" },
+        cmux: { available: false, icon: null }
+      };
+    },
     async open(input) { calls.push(input); }
   };
   const host = createDesktopBridge({ manager, terminalLauncher, cdp });
@@ -441,7 +446,7 @@ test("Dashboard terminal actions route through the selected native terminal impl
     { teamId: "team-1", terminal: "ghostty" },
     { teamId: "team-1", terminal: "cmux" }
   ]);
-  assert.match(expressions.join("\n"), /"terminalAvailability":\{"ghostty":true,"cmux":false\}/);
+  assert.match(expressions.join("\n"), /"terminalApplications":\{"ghostty":\{"available":true,"icon":"data:image\/png;base64,ghostty"\},"cmux":\{"available":false,"icon":null\}\}/);
 });
 
 test("member activation routes through Codex native navigation without resuming the thread", async () => {

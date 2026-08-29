@@ -116,9 +116,9 @@ CodexAgentTeam does not modify Codex SQLite, rollout files, `config.toml`, authe
 
 ## Optional terminal view
 
-From the Dashboard, open a Team in **Ghostty** or **cmux**. CodexAgentTeam resumes the same native member Threads in one tab or workspace with split panes and member titles. This is another view over the Team, not another session model.
+From each Team header in the Dashboard, choose **Ghostty** or **cmux** from the terminal menu. CodexAgentTeam resumes the same native member Threads in one tab or workspace with split panes and member titles. This is another view over the Team, not another session model.
 
-Terminal availability is detected once when the Runtime starts; applications that are not installed are shown disabled. cmux defaults to accepting control commands only from processes it started. To use the Dashboard cmux button from Codex, start cmux with `CMUX_SOCKET_MODE=allowAll`; this allows other processes running as the same macOS user to access the cmux control socket. Use Ghostty if you do not want that broader local access mode.
+Terminal availability is detected once when the Runtime starts; applications that are not installed are shown disabled, and installed applications use their native macOS icons. Ghostty and cmux are opened through their native AppleScript automation APIs, so CodexAgentTeam does not require cmux control-socket access or a global `allowAll` setting.
 
 ## Safety and compatibility
 

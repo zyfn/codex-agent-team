@@ -157,7 +157,8 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-team-directory-row:focus-visible,
   .cat-team-expand-all:focus-visible,
   .cat-text-action:focus-visible,
-  .cat-terminal-action:focus-visible,
+  .cat-terminal-menu-summary:focus-visible,
+  .cat-terminal-menu-option:focus-visible,
   .cat-member-open:focus-visible,
   .cat-picker-button:focus-visible,
   .cat-avatar-source-option:focus-visible,
@@ -207,7 +208,7 @@ export const TEAM_UI_STYLES = String.raw`
 
   .cat-team-directory-row {
     display: grid;
-    grid-template-columns: minmax(180px, .7fr) minmax(0, 1fr) auto 20px;
+    grid-template-columns: minmax(180px, .7fr) auto minmax(0, 1fr) auto 20px;
     align-items: center;
     gap: 18px;
     width: 100%;
@@ -270,37 +271,72 @@ export const TEAM_UI_STYLES = String.raw`
   .cat-team-directory-members[hidden] { display: none; }
   .cat-team-inline-actions { display: flex; align-items: center; justify-content: flex-end; gap: 2px; padding: 8px 0 3px; }
 
-  .cat-terminal-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-right: auto;
-    padding: 2px 0;
-  }
+  .cat-terminal-menu { position: relative; z-index: 4; }
+  .cat-terminal-menu[open] { z-index: 8; }
 
-  .cat-terminal-label { color: var(--cat-muted); font-size: 10px; font-weight: 560; letter-spacing: .01em; }
-  .cat-terminal-options { display: inline-flex; align-items: center; gap: 4px; }
-
-  .cat-terminal-action {
-    border-radius: 7px;
+  .cat-terminal-menu-summary {
     display: inline-flex;
+    min-height: 28px;
     align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
-    background: color-mix(in srgb, currentColor 5%, transparent);
+    gap: 3px;
+    border-radius: 8px;
+    padding: 4px 7px 4px 9px;
     color: var(--cat-muted);
-    font-size: 10px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 560;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
   }
 
-  .cat-terminal-logo-wrap,
-  .cat-terminal-logo { width: 14px; height: 14px; flex: 0 0 14px; }
-  .cat-terminal-logo.ghostty { color: #b6a3ff; }
-  .cat-terminal-logo.cmux { color: #7dc9ff; }
+  .cat-terminal-menu-summary::-webkit-details-marker { display: none; }
+  .cat-terminal-menu-summary:hover,
+  .cat-terminal-menu[open] .cat-terminal-menu-summary { background: color-mix(in srgb, currentColor 7%, transparent); color: var(--text-primary, #f5f5f7); }
+  .cat-terminal-menu-summary[aria-disabled="true"] { cursor: default; opacity: .32; }
+  .cat-terminal-menu-chevron { display: grid; width: 15px; height: 15px; place-items: center; }
+  .cat-terminal-menu-chevron-icon { width: 12px; height: 12px; transition: transform .16s ease; }
+  .cat-terminal-menu[open] .cat-terminal-menu-chevron-icon { transform: rotate(180deg); }
 
-  .cat-terminal-action:hover { border-color: color-mix(in srgb, currentColor 18%, transparent); background: color-mix(in srgb, currentColor 10%, transparent); color: var(--text-primary, #f5f5f7); }
-  .cat-terminal-action:disabled { cursor: not-allowed; opacity: .28; filter: grayscale(1); }
+  .cat-terminal-menu-popover {
+    position: absolute;
+    top: calc(100% + 7px);
+    left: 0;
+    z-index: 12;
+    display: grid;
+    min-width: 164px;
+    gap: 2px;
+    border: 1px solid color-mix(in srgb, #fff 13%, transparent);
+    border-radius: 13px;
+    padding: 5px;
+    background: color-mix(in srgb, var(--background-primary, #17181c) 88%, transparent);
+    box-shadow: 0 16px 42px #0007, inset 0 1px #ffffff12;
+    backdrop-filter: blur(28px) saturate(155%);
+    -webkit-backdrop-filter: blur(28px) saturate(155%);
+  }
+
+  .cat-terminal-menu-option {
+    display: grid;
+    grid-template-columns: 25px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    border: 0;
+    border-radius: 9px;
+    padding: 7px 9px;
+    background: transparent;
+    color: var(--text-primary, #f5f5f7);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 570;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .cat-terminal-menu-option:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+  .cat-terminal-menu-option:disabled { cursor: not-allowed; opacity: .3; filter: grayscale(1); }
+  .cat-terminal-app-icon-slot,
+  .cat-terminal-app-icon { width: 25px; height: 25px; }
+  .cat-terminal-app-icon-slot { display: grid; place-items: center; flex: 0 0 25px; }
+  .cat-terminal-app-icon { display: block; border-radius: 6px; object-fit: contain; }
 
   .cat-text-action {
     border: 0;
@@ -423,7 +459,9 @@ export const TEAM_UI_STYLES = String.raw`
     .cat-shell { padding: 24px 16px 52px; }
     .cat-panel-toolbar { align-items: flex-start; flex-direction: column; }
     .cat-actions { width: 100%; flex-wrap: wrap; }
-    .cat-team-directory-row { grid-template-columns: minmax(112px, .7fr) minmax(0, 1fr) auto 18px; gap: 10px; padding: 13px 14px; }
+    .cat-team-directory-row { grid-template-columns: minmax(112px, .7fr) auto minmax(0, 1fr) auto 18px; gap: 8px; padding: 13px 14px; }
+    .cat-terminal-menu-summary { padding-inline: 7px; }
+    .cat-terminal-menu-summary-label { display: none; }
     .cat-member-avatar-ring { width: 34px; height: 34px; }
     .cat-member-row { grid-template-columns: 1fr; }
     .cat-member-row-actions { justify-self: start; opacity: 1; }

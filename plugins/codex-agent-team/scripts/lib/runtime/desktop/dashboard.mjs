@@ -62,8 +62,8 @@ export function chooseNativeDirectory(hostWindow, { timeoutMs = 120_000 } = {}) 
 
 function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, styles, chooseNativeDirectory) {
   const state = window.__codexAgentTeam ??= {};
-  if (state.uiRevision !== "top-navigation-v4") state.dispose?.();
-  state.uiRevision = "top-navigation-v4";
+  if (state.uiRevision !== "top-navigation-v5") state.dispose?.();
+  state.uiRevision = "top-navigation-v5";
   state.snapshot = snapshot;
   state.bindingName = bindingName;
   state.expandedTeamIds ??= new Set((snapshot.teams ?? []).map((team) => team.teamId));
@@ -80,7 +80,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       running: "Running", waiting: "Needs attention", idle: "Idle", offline: "Offline", error: "Error",
       newTeam: "New Team", back: "Back",
       expandAll: "Expand All", collapseAll: "Collapse All", addMember: "Add Member",
-      openCli: "Open CLI", openGhostty: "Open in Ghostty", openCmux: "Open in cmux",
+      openInTerminal: "Open in…", openGhostty: "Open in Ghostty", openCmux: "Open in cmux",
       ghosttyUnavailable: "Ghostty is not installed", cmuxUnavailable: "cmux is not installed",
       editTeam: "Edit Team", removeTeam: "Remove Team", noRole: "No role set",
       edit: "Edit", removeMember: "Remove Member", noMembers: "No members yet",
@@ -113,7 +113,7 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       running: "运行中", waiting: "等待操作", idle: "空闲", offline: "离线", error: "异常",
       newTeam: "创建团队", back: "返回",
       expandAll: "全部展开", collapseAll: "全部收起", addMember: "添加成员",
-      openCli: "打开 CLI", openGhostty: "在 Ghostty 中打开", openCmux: "在 cmux 中打开",
+      openInTerminal: "在终端中打开…", openGhostty: "在 Ghostty 中打开", openCmux: "在 cmux 中打开",
       ghosttyUnavailable: "未安装 Ghostty", cmuxUnavailable: "未安装 cmux",
       editTeam: "编辑团队", removeTeam: "移除团队", noRole: "未设置职责",
       edit: "编辑", removeMember: "移除成员", noMembers: "暂无成员",
@@ -147,7 +147,8 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
   state.update = (nextSnapshot, completeAction = false) => {
     const builtInAvatars = state.snapshot?.builtInAvatars ?? [];
     const availableModels = nextSnapshot.availableModels ?? state.snapshot?.availableModels ?? [];
-    state.snapshot = { ...nextSnapshot, builtInAvatars, availableModels };
+    const terminalApplications = nextSnapshot.terminalApplications ?? state.snapshot?.terminalApplications ?? {};
+    state.snapshot = { ...nextSnapshot, builtInAvatars, availableModels, terminalApplications };
     const pendingOverlay = document.querySelector("#codex-agent-team-modal[data-pending-action]");
     if (pendingOverlay && (completeAction || nextSnapshot.error)) pendingOverlay.remove();
     renderSidebar();
@@ -197,18 +198,27 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
     return ring;
   };
   const chevronSvg = (className) => `<svg width="20" height="21" class="${className}" viewBox="0 0 20 21" fill="none" aria-hidden="true"><path d="M15.2793 7.71101C15.539 7.45131 15.961 7.45131 16.2207 7.71101C16.4804 7.97071 16.4804 8.39272 16.2207 8.65242L10.4707 14.4024C10.211 14.6621 9.78902 14.6621 9.52932 14.4024L3.77932 8.65242L3.69436 8.54792C3.52385 8.28979 3.55205 7.93828 3.77932 7.71101C4.00659 7.48374 4.3581 7.45554 4.61623 7.62605L4.72073 7.71101L10 12.9903L15.2793 7.71101Z" fill="currentColor" stroke="currentColor" stroke-width="0.6"/></svg>`;
-  const terminalLogo = (terminal) => terminal === "ghostty"
-    ? '<svg class="cat-terminal-logo ghostty" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="2" width="13" height="12" rx="3" stroke="currentColor" stroke-width="1.2"/><path d="m4.5 6 2 2-2 2M8 10h3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    : '<svg class="cat-terminal-logo cmux" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h.01M11 11h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const terminalAppIcon = (terminal) => {
+    const node = document.createElement("span");
+    node.className = "cat-terminal-app-icon-slot";
+    const source = state.snapshot.terminalApplications?.[terminal]?.icon;
+    if (!source) return node;
+    const image = document.createElement("img");
+    image.className = "cat-terminal-app-icon";
+    image.src = source;
+    image.alt = "";
+    node.append(image);
+    return node;
+  };
 
   function ensureStyles() {
     const existing = document.querySelector("#codex-agent-team-styles");
-    if (existing?.dataset.revision === "top-navigation-v4") return;
+    if (existing?.dataset.revision === "top-navigation-v5") return;
     existing?.remove();
     document.querySelector("#codex-agent-team-style-refinements")?.remove();
     const style = document.createElement("style");
     style.id = "codex-agent-team-styles";
-    style.dataset.revision = "top-navigation-v4";
+    style.dataset.revision = "top-navigation-v5";
     style.textContent = styles;
     document.head.append(style);
   }
@@ -410,9 +420,10 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       const expanded = state.expandedTeamIds.has(team.teamId);
       const group = document.createElement("article");
       group.className = "cat-team-directory-group";
-      const row = document.createElement("button");
-      row.type = "button";
+      const row = document.createElement("div");
       row.className = "cat-team-directory-row";
+      row.tabIndex = 0;
+      row.setAttribute("role", "button");
       row.setAttribute("aria-expanded", String(expanded));
       row.setAttribute("aria-controls", `cat-team-members-${team.teamId}`);
       const name = document.createElement("span");
@@ -421,17 +432,71 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       const carousel = document.createElement("span");
       carousel.className = "cat-member-carousel";
       for (const member of team.members) carousel.append(avatarRing(member));
+      const terminalMenu = document.createElement("details");
+      terminalMenu.className = "cat-terminal-menu";
+      terminalMenu.onclick = (event) => event.stopPropagation();
+      terminalMenu.ontoggle = () => {
+        if (!terminalMenu.open) return;
+        for (const other of document.querySelectorAll(".cat-terminal-menu[open]")) {
+          if (other !== terminalMenu) other.open = false;
+        }
+      };
+      const terminalSummary = document.createElement("summary");
+      terminalSummary.className = "cat-terminal-menu-summary";
+      terminalSummary.setAttribute("aria-label", t("openInTerminal"));
+      const terminalSummaryLabel = document.createElement("span");
+      terminalSummaryLabel.className = "cat-terminal-menu-summary-label";
+      terminalSummaryLabel.textContent = t("openInTerminal");
+      terminalSummary.append(terminalSummaryLabel);
+      const terminalChevron = document.createElement("span");
+      terminalChevron.className = "cat-terminal-menu-chevron";
+      terminalChevron.innerHTML = chevronSvg("cat-terminal-menu-chevron-icon");
+      terminalSummary.append(terminalChevron);
+      if (!team.members.length) {
+        terminalSummary.setAttribute("aria-disabled", "true");
+        terminalSummary.onclick = (event) => event.preventDefault();
+      }
+      const terminalPopover = document.createElement("div");
+      terminalPopover.className = "cat-terminal-menu-popover";
+      for (const [terminal, label] of [["ghostty", "openGhostty"], ["cmux", "openCmux"]]) {
+        const application = state.snapshot.terminalApplications?.[terminal] ?? {};
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "cat-terminal-menu-option";
+        button.append(terminalAppIcon(terminal));
+        const optionName = document.createElement("span");
+        optionName.textContent = terminal === "ghostty" ? "Ghostty" : "cmux";
+        button.append(optionName);
+        const accessibleLabel = application.available ? t(label) : t(`${terminal}Unavailable`);
+        button.title = accessibleLabel;
+        button.setAttribute("aria-label", accessibleLabel);
+        button.disabled = team.members.length === 0 || application.available !== true;
+        button.onclick = () => {
+          terminalMenu.open = false;
+          send({ type: "openTeamTerminal", teamId: team.teamId, terminal });
+        };
+        terminalPopover.append(button);
+      }
+      terminalMenu.append(terminalSummary, terminalPopover);
       const stateLabel = document.createElement("span");
       stateLabel.className = `cat-team-state ${teamStatus(team)}`;
       stateLabel.textContent = statusLabel(teamStatus(team));
       const chevron = document.createElement("span");
       chevron.className = "cat-team-chevron";
       chevron.innerHTML = chevronSvg("cat-team-chevron-icon");
-      row.append(name, carousel, stateLabel, chevron);
-      row.onclick = () => {
+      row.append(name, terminalMenu, carousel, stateLabel, chevron);
+      const toggleTeam = () => {
         if (expanded) state.expandedTeamIds.delete(team.teamId);
         else state.expandedTeamIds.add(team.teamId);
         showPanel();
+      };
+      row.onclick = (event) => {
+        if (!event.target.closest(".cat-terminal-menu")) toggleTeam();
+      };
+      row.onkeydown = (event) => {
+        if (event.target !== row || !["Enter", " "].includes(event.key)) return;
+        event.preventDefault();
+        toggleTeam();
       };
       const members = document.createElement("div");
       members.id = `cat-team-members-${team.teamId}`;
@@ -439,33 +504,6 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
       members.hidden = !expanded;
       const memberActions = document.createElement("div");
       memberActions.className = "cat-team-inline-actions";
-      const terminalActions = document.createElement("span");
-      terminalActions.className = "cat-terminal-actions";
-      const terminalLabel = document.createElement("span");
-      terminalLabel.className = "cat-terminal-label";
-      terminalLabel.textContent = t("openCli");
-      const terminalOptions = document.createElement("span");
-      terminalOptions.className = "cat-terminal-options";
-      terminalActions.append(terminalLabel, terminalOptions);
-      for (const [terminal, label] of [["ghostty", "openGhostty"], ["cmux", "openCmux"]]) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "cat-terminal-action";
-        const logo = document.createElement("span");
-        logo.className = "cat-terminal-logo-wrap";
-        logo.innerHTML = terminalLogo(terminal);
-        const name = document.createElement("span");
-        name.textContent = terminal === "ghostty" ? "Ghostty" : "cmux";
-        button.append(logo, name);
-        const installed = state.snapshot.terminalAvailability?.[terminal] === true;
-        const accessibleLabel = installed ? t(label) : t(`${terminal}Unavailable`);
-        button.title = accessibleLabel;
-        button.setAttribute("aria-label", accessibleLabel);
-        button.disabled = team.members.length === 0 || !installed;
-        button.onclick = () => send({ type: "openTeamTerminal", teamId: team.teamId, terminal });
-        terminalOptions.append(button);
-      }
-      memberActions.append(terminalActions);
       for (const [text, handler] of [[t("addMember"), () => showMemberForm(team)], [t("editTeam"), () => showTeamForm(team)], [t("removeTeam"), () => showConfirmation({ title: t("removeTeamTitle", { name: team.name }), description: t("removeTeamDescription"), confirmText: t("removeTeam"), action: { type: "removeTeam", teamId: team.teamId } })]]) {
         const button = document.createElement("button");
         button.type = "button";

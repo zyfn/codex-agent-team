@@ -116,9 +116,9 @@ CodexAgentTeam 不修改 Codex SQLite、rollout 文件、`config.toml`、认证�
 
 ## 可选终端视图
 
-在 Dashboard 中选择 **Ghostty** 或 **cmux**，即可把同一批原生成员 Thread 放进一个标签页或工作区，并使用成员标题分屏。这只是 Team 的另一种视图，不是另一套 Session 模型。
+在 Dashboard 的团队标题行中，通过终端下拉菜单选择 **Ghostty** 或 **cmux**，即可把同一批原生成员 Thread 放进一个标签页或工作区，并使用成员标题分屏。这只是 Team 的另一种视图，不是另一套 Session 模型。
 
-Runtime 启动时只检测一次终端安装情况；未安装的应用会置灰。cmux 默认只接受其自身启动进程的控制命令。若要从 Codex Dashboard 使用 cmux 按钮，需要以 `CMUX_SOCKET_MODE=allowAll` 启动 cmux；这会允许同一 macOS 用户下的其他本地进程访问 cmux 控制 socket。不希望扩大本地访问范围时，请使用 Ghostty。
+Runtime 启动时只检测一次终端安装情况；未安装的应用会置灰，已安装应用显示其 macOS 原生图标。Ghostty 和 cmux 都通过各自原生的 AppleScript 自动化接口打开，因此不需要 cmux control socket，也不要求用户开启全局 `allowAll`。
 
 ## 安全与兼容性
 

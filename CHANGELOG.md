@@ -11,4 +11,4 @@
 - Run in a separate Codex Desktop with an isolated profile and one temporary official Codex App Server.
 - Preserve native conversations, Team data, Member Directories, worktrees, branches, and avatars when a run ends or a member is removed.
 - Fail closed when required experimental Codex Desktop capabilities are unavailable.
-- Use the shorter **AgentTeam** label for the in-app projection, detect installed terminal applications once per Runtime, and distinguish Ghostty and cmux with dedicated controls.
+- Use the shorter **AgentTeam** label for the in-app projection, detect installed terminal applications once per Runtime, show their native macOS icons, and open them from one Team-header menu through native AppleScript automation.
