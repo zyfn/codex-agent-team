@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -104,7 +104,7 @@ test("Ghostty uses one native tab with native split commands", async (context) =
   assert.match(script, /split terminal1 direction down with configuration config3/);
   assert.match(script, /set_tab_title:CodexAgentTeam · Product/);
 
-  if (process.platform !== "darwin") return;
+  if (process.platform !== "darwin" || !(await applicationExists("/Applications/Ghostty.app"))) return;
   const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-applescript-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const result = spawnSync("/usr/bin/osacompile", [
@@ -158,7 +158,7 @@ test("cmux AppleScript waits for each terminal and submits the native resume com
   assert.match(script, /select tab teamTab/);
   assert.match(script, /return "opened"/);
 
-  if (process.platform !== "darwin") return;
+  if (process.platform !== "darwin" || !(await applicationExists("/Applications/cmux.app"))) return;
   const root = await mkdtemp(path.join(os.tmpdir(), "codex-agent-team-cmux-applescript-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const result = spawnSync("/usr/bin/osacompile", [
@@ -167,3 +167,12 @@ test("cmux AppleScript waits for each terminal and submits the native resume com
   ], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
 });
+
+async function applicationExists(application) {
+  try {
+    await access(application);
+    return true;
+  } catch {
+    return false;
+  }
+}
