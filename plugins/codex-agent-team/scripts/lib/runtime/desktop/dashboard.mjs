@@ -62,8 +62,8 @@ export function chooseNativeDirectory(hostWindow, { timeoutMs = 120_000 } = {}) 
 
 function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, styles, chooseNativeDirectory) {
   const state = window.__codexAgentTeam ??= {};
-  if (state.uiRevision !== "top-navigation-v7") state.dispose?.();
-  state.uiRevision = "top-navigation-v7";
+  if (state.uiRevision !== "top-navigation-v8") state.dispose?.();
+  state.uiRevision = "top-navigation-v8";
   state.snapshot = snapshot;
   state.bindingName = bindingName;
   state.expandedTeamIds ??= new Set();
@@ -215,12 +215,12 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
 
   function ensureStyles() {
     const existing = document.querySelector("#codex-agent-team-styles");
-    if (existing?.dataset.revision === "top-navigation-v7") return;
+    if (existing?.dataset.revision === "top-navigation-v8") return;
     existing?.remove();
     document.querySelector("#codex-agent-team-style-refinements")?.remove();
     const style = document.createElement("style");
     style.id = "codex-agent-team-styles";
-    style.dataset.revision = "top-navigation-v7";
+    style.dataset.revision = "top-navigation-v8";
     style.textContent = styles;
     document.head.append(style);
   }
@@ -418,13 +418,8 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
     }
     const directory = document.createElement("section");
     directory.className = "cat-team-directory cat-glass";
-    let pendingCompactGroup = null;
     for (const team of teams) {
       const expanded = state.expandedTeamIds.has(team.teamId);
-      if (expanded && pendingCompactGroup) {
-        pendingCompactGroup.classList.add("wide");
-        pendingCompactGroup = null;
-      }
       const group = document.createElement("article");
       group.className = "cat-team-directory-group";
       group.classList.toggle("expanded", expanded);
@@ -565,9 +560,6 @@ function installTeamUi(snapshot, bindingName, findNativeTopNavigationItem, style
         group.append(members);
       }
       directory.append(group);
-      if (expanded) pendingCompactGroup = null;
-      else if (pendingCompactGroup) pendingCompactGroup = null;
-      else pendingCompactGroup = group;
     }
     if (!teams.length) {
       const empty = document.createElement("div");

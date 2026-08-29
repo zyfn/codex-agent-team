@@ -162,7 +162,7 @@ test("CodexAgentTeam is a native-looking top-level navigation item and leaves Pr
   assert.match(expression, /state\.expandedTeamIds \?\?= new Set\(\)/);
   assert.doesNotMatch(expression, /new Set\(\(snapshot\.teams \?\? \[\]\)\.map/);
   assert.match(expression, /group\.classList\.toggle\("expanded", expanded\)/);
-  assert.match(expression, /pendingCompactGroup\.classList\.add\("wide"\)/);
+  assert.doesNotMatch(expression, /pendingCompactGroup/);
   assert.match(expression, /if \(expanded\) \{\s*const members/);
   assert.match(expression, /aria-expanded/);
   assert.match(expression, /cat-member-carousel/);
@@ -172,9 +172,9 @@ test("CodexAgentTeam is a native-looking top-level navigation item and leaves Pr
   assert.match(expression, /statuses\.every\(\(status\) => status === "offline"\)/);
   assert.doesNotMatch(expression, /cat-team-detail/);
   assert.match(expression, /overflow-x:\s*auto/);
-  assert.match(expression, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
-  assert.match(expression, /grid-column:\s*1\s*\/\s*-1/);
-  assert.match(expression, /position:\s*sticky/);
+  assert.doesNotMatch(expression, /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.doesNotMatch(expression, /cat-team-directory-group\.wide/);
+  assert.doesNotMatch(expression, /position:\s*sticky/);
   assert.match(expression, /error: 0, waiting: 1, running: 2, idle: 3, offline: 4/);
   assert.doesNotMatch(expression, /退出 CodexAgentTeam/);
   assert.match(expression, /backdrop-filter:\s*blur\(38px\)/);
